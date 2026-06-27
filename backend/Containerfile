@@ -1,23 +1,40 @@
-# backend/Containerfile
-FROM python:3.11-slim
+# backend/Containerfile — build multi-stage, usuario no-root
+# ----------------------------------------------------------------------
+# Etapa 1: builder — instala dependencias en un prefijo aislado
+# ----------------------------------------------------------------------
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Instalar dependencias del sistema necesarias
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar e instalar dependencias de Python
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# Copiar el código fuente
+# ----------------------------------------------------------------------
+# Etapa 2: runtime — imagen final mínima
+# ----------------------------------------------------------------------
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# `curl` es necesario para el healthcheck del contenedor.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /install /usr/local
 COPY . .
 
-# Exponer el puerto del API
+# Usuario no-root y carpeta de uploads con permisos.
+RUN useradd -m -u 1000 docuagent \
+    && mkdir -p /app/uploads \
+    && chown -R docuagent:docuagent /app
+USER docuagent
+
 EXPOSE 8000
 
-# Lanzar migraciones de base de datos relacional y luego el servidor Uvicorn
+# Aplica migraciones y arranca el servidor.
 CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
