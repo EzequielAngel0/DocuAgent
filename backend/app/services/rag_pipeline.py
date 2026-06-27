@@ -12,6 +12,7 @@ qdrant_client = QdrantClient(
     host=settings.QDRANT_HOST,
     port=settings.QDRANT_PORT,
     api_key=settings.QDRANT_API_KEY if settings.QDRANT_API_KEY else None,
+    https=False,
 )
 
 cohere_client = cohere.Client(
