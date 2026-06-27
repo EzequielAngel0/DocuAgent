@@ -1,44 +1,65 @@
-import os
+"""Punto de entrada de la API DocuAgent (FastAPI)."""
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app import __version__
+from app.api.v1.router import api_router
 from app.core.config import settings
-from app.api.endpoints import auth, admin, chat
-from app.services.rag_pipeline import create_collection_if_not_exists
+from app.core.logging import configure_logging, get_logger
+from app.db.session import SessionLocal
+from app.rag.vector_store import vector_store
+
+configure_logging()
+logger = get_logger("docuagent")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Inicializar la colección vectorial en Qdrant
-    create_collection_if_not_exists()
+    # Inicializar la colección vectorial en Qdrant (no falla el arranque).
+    vector_store.ensure_collection()
+
+    # Crear/sincronizar el administrador semilla.
+    try:
+        from app.api.v1.endpoints.auth import ensure_default_admin
+
+        async with SessionLocal() as db:
+            await ensure_default_admin(db)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("admin_seed_skipped", error=str(exc))
+
+    logger.info("app_started", environment=settings.ENVIRONMENT, version=__version__)
     yield
+
 
 app = FastAPI(
     title=settings.NEXT_PUBLIC_APP_NAME,
+    version=__version__,
     openapi_url=f"{settings.API_PREFIX}/openapi.json",
     docs_url=f"{settings.API_PREFIX}/docs",
     redoc_url=f"{settings.API_PREFIX}/redoc",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
-# Configurar middleware CORS
-# Permitir todos los orígenes en staging para dar soporte al túnel de Cloudflare
+# CORS restringido a los orígenes configurados (ver CORS_ALLOWED_ORIGINS).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Registrar Routers de la API v1
-app.include_router(auth.router, prefix=f"{settings.API_PREFIX}/auth", tags=["Autenticación"])
-app.include_router(admin.router, prefix=f"{settings.API_PREFIX}/admin", tags=["Administración"])
-app.include_router(chat.router, prefix=f"{settings.API_PREFIX}/chat", tags=["Chat"])
+app.include_router(api_router, prefix=settings.API_PREFIX)
+
 
 @app.get("/")
 def read_root():
     return {
         "status": "online",
         "app_name": settings.NEXT_PUBLIC_APP_NAME,
-        "environment": settings.ENVIRONMENT
+        "environment": settings.ENVIRONMENT,
+        "version": __version__,
+        "docs": f"{settings.API_PREFIX}/docs",
     }
