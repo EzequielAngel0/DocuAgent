@@ -19,7 +19,7 @@ if ($args) { $ExtraArgs = $args }
 $Root         = Split-Path -Parent $PSScriptRoot
 $ComposeBase  = Join-Path $Root "podman-compose.yml"
 $ComposeDev   = Join-Path $Root "podman-compose.dev.yml"
-$EnvFile      = Join-Path $Root ".env"
+$EnvFile      = Join-Path $Root ".env.staging"
 $EnvExample   = Join-Path $Root ".env.example"
 
 function Show-Help {
@@ -54,24 +54,26 @@ if (Get-Command podman -ErrorAction SilentlyContinue) { $Cmd = "podman" }
 elseif (Get-Command docker -ErrorAction SilentlyContinue) { $Cmd = "docker" }
 else { Write-Host "[ERROR] Ni Podman ni Docker estan instalados."; exit 1 }
 
-# --- Verificar .env ---
+# --- Verificar .env.staging ---
 if (-not (Test-Path $EnvFile)) {
   if (Test-Path $EnvExample) {
-    Write-Host "[aviso] No existe .env. Creando desde .env.example -- rellenalo con tus valores."
+    Write-Host "[aviso] No existe .env.staging. Creando desde .env.example -- rellenalo con tus valores de staging."
     Copy-Item $EnvExample $EnvFile
   } else {
-    Write-Host "[ERROR] No existe .env ni .env.example. Crea el archivo .env primero."
+    Write-Host "[ERROR] No existe .env.staging ni .env.example. Crea el archivo .env.staging primero."
     exit 1
   }
 }
 
 function Invoke-Compose {
   param([string[]]$ComposeArgs)
+  $env:ENV_FILE = ".env.staging"
   & $Cmd compose -f $ComposeBase -f $ComposeDev --env-file $EnvFile @ComposeArgs
 }
 
 function Invoke-ComposeLocal {
   param([string[]]$ComposeArgs)
+  $env:ENV_FILE = ".env.staging"
   & $Cmd compose -f $ComposeBase --env-file $EnvFile @ComposeArgs
 }
 

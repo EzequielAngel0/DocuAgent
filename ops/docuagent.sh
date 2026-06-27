@@ -14,7 +14,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_BASE="$ROOT/podman-compose.yml"
 COMPOSE_PROD="$ROOT/podman-compose.prod.yml"
-ENV_FILE="$ROOT/.env"
+ENV_FILE="$ROOT/.env.prod"
 ENV_EXAMPLE="$ROOT/.env.example"
 
 show_help() {
@@ -48,19 +48,19 @@ if command -v podman &>/dev/null; then CMD="podman"
 elif command -v docker &>/dev/null; then CMD="docker"
 else echo "[ERROR] Ni Podman ni Docker estan instalados."; exit 1; fi
 
-# --- Verificar .env ---
+# --- Verificar .env.prod ---
 if [ ! -f "$ENV_FILE" ]; then
   if [ -f "$ENV_EXAMPLE" ]; then
-    echo "[aviso] No existe .env. Creando desde .env.example -- rellenalo."
+    echo "[aviso] No existe .env.prod. Creando desde .env.example -- rellenalo."
     cp "$ENV_EXAMPLE" "$ENV_FILE"
   else
-    echo "[ERROR] No existe .env ni .env.example."
+    echo "[ERROR] No existe .env.prod ni .env.example."
     exit 1
   fi
 fi
 
 compose() {
-  $CMD compose -f "$COMPOSE_BASE" -f "$COMPOSE_PROD" --env-file "$ENV_FILE" "$@"
+  ENV_FILE=".env.prod" $CMD compose -f "$COMPOSE_BASE" -f "$COMPOSE_PROD" --env-file "$ENV_FILE" "$@"
 }
 
 prune_light() {

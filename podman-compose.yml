@@ -6,7 +6,7 @@ services:
       context: ./backend
       dockerfile: Containerfile
     container_name: docuagent-backend
-    env_file: .env
+    env_file: ${ENV_FILE:-.env}
     ports:
       - "8000:8000"
     depends_on:
@@ -24,7 +24,7 @@ services:
       context: ./frontend
       dockerfile: Containerfile
     container_name: docuagent-frontend
-    env_file: .env
+    env_file: ${ENV_FILE:-.env}
     ports:
       - "3000:3000"
     depends_on:
