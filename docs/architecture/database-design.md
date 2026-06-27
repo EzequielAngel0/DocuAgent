@@ -1,350 +1,179 @@
 # 🗄️ Diseño de Base de Datos
 
-## Bases de Datos del Sistema
-
-El sistema utiliza **dos bases de datos complementarias**:
+El sistema usa **dos almacenes complementarios**:
 
 | BD | Motor | Propósito |
 |----|-------|-----------|
-| **Vectorial** | Qdrant | Almacenamiento y búsqueda de embeddings |
-| **Relacional** | PostgreSQL | Metadatos, categorías, logs, feedback, sesiones |
+| **Relacional** | PostgreSQL 16 | Admin, categorías, documentos, auditoría de consultas |
+| **Vectorial** | Qdrant | Embeddings de los fragmentos (chunks) + búsqueda |
+
+> Esta página describe el esquema **real** (migración inicial de Alembic
+> `7ea92cfb1b83`). Los **chunks NO se guardan en PostgreSQL**: viven únicamente
+> en Qdrant como puntos. La auditoría de cada consulta del chat se registra de
+> forma desnormalizada en `audit_logs` (con sus citas en JSON), en lugar del
+> modelo más granular sesiones/mensajes. Ver _Evolución futura_ al final.
 
 ---
 
-## PostgreSQL — Modelo Relacional
+## PostgreSQL — Modelo relacional
 
 ### Diagrama Entidad-Relación
 
 ```mermaid
 erDiagram
-    CATEGORIES ||--o{ DOCUMENTS : "belongs_to"
-    DOCUMENTS ||--o{ CHUNKS : "has_many"
-    DOCUMENTS ||--o{ DOCUMENT_METADATA : "has_one"
-    CHAT_SESSIONS ||--o{ CHAT_MESSAGES : "has_many"
-    CHAT_MESSAGES ||--o{ MESSAGE_SOURCES : "has_many"
-    CHAT_MESSAGES ||--o| MESSAGE_FEEDBACK : "has_one"
-
+    CATEGORIES ||--o{ DOCUMENTS : "tiene"
+    ADMIN_USERS {
+        int id PK
+        string email UK
+        string password_hash
+        string totp_secret
+        bool is_totp_enabled
+        datetime created_at
+    }
     CATEGORIES {
-        uuid id PK
-        string name
-        string slug
-        string description
+        string id PK
+        string name UK
+        string slug UK
         string color
-        string icon
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
+        string icon_name
+        datetime created_at
     }
-
     DOCUMENTS {
-        uuid id PK
-        uuid category_id FK
-        string filename
-        string original_filename
+        string id PK
+        string name
         string file_path
-        string mime_type
-        bigint file_size
+        string category_id FK
+        int chunks_count
         string status
-        string language
-        integer chunk_count
-        timestamp created_at
-        timestamp updated_at
-        timestamp indexed_at
+        datetime uploaded_at
     }
-
-    DOCUMENT_METADATA {
-        uuid id PK
-        uuid document_id FK
-        string author
-        string version
-        date document_date
-        jsonb custom_fields
-    }
-
-    CHUNKS {
-        uuid id PK
-        uuid document_id FK
-        integer chunk_index
-        text content
-        string qdrant_point_id
-        integer char_count
-        integer token_count_approx
-        string section_title
-        integer page_number
-        timestamp created_at
-    }
-
-    CHAT_SESSIONS {
-        uuid id PK
-        string session_token
-        string user_identifier
-        timestamp created_at
-        timestamp last_activity
-    }
-
-    CHAT_MESSAGES {
-        uuid id PK
-        uuid session_id FK
-        string role
-        text content
-        float response_time_ms
-        string llm_provider
-        string llm_model
-        integer tokens_input
-        integer tokens_output
-        float confidence_score
-        boolean is_fallback
-        timestamp created_at
-    }
-
-    MESSAGE_SOURCES {
-        uuid id PK
-        uuid message_id FK
-        uuid document_id FK
-        uuid chunk_id FK
-        float relevance_score
-        float rerank_score
-        text snippet
-    }
-
-    MESSAGE_FEEDBACK {
-        uuid id PK
-        uuid message_id FK
-        boolean is_positive
-        text comment
-        timestamp created_at
+    AUDIT_LOGS {
+        int id PK
+        string query
+        string response
+        float confidence
+        string category
+        string feedback
+        json citations
+        datetime created_at
     }
 ```
 
-### Tablas Detalladas
+### Tablas
+
+#### `admin_users`
+Administradores del panel (login email/password + TOTP). Se siembra/sincroniza
+al arrancar desde `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_TOTP_SECRET`.
+
+| Columna | Tipo | Nullable | Notas |
+|---------|------|----------|-------|
+| `id` | INTEGER | NO | PK |
+| `email` | VARCHAR(255) | NO | UNIQUE, index |
+| `password_hash` | VARCHAR(255) | NO | bcrypt |
+| `totp_secret` | VARCHAR(255) | SÍ | base32 |
+| `is_totp_enabled` | BOOLEAN | NO | default false |
+| `created_at` | DATETIME | NO | |
 
 #### `categories`
-Categorías dinámicas de documentos, configurables por el administrador.
+Categorías dinámicas (CRUD desde el admin). El `id` es una cadena corta
+(`cat_xxxx`). Se siembran 4 por defecto si la tabla está vacía.
 
-| Columna | Tipo | Nullable | Descripción |
-|---------|------|----------|-------------|
-| `id` | UUID | NO | PK, generado automáticamente |
-| `name` | VARCHAR(100) | NO | Nombre de la categoría |
-| `slug` | VARCHAR(100) | NO | Slug URL-friendly (UNIQUE) |
-| `description` | TEXT | SÍ | Descripción opcional |
-| `color` | VARCHAR(7) | SÍ | Color hex (#3498db) |
-| `icon` | VARCHAR(50) | SÍ | Nombre del icono |
-| `is_active` | BOOLEAN | NO | Si la categoría está activa (default: true) |
-| `created_at` | TIMESTAMPTZ | NO | Fecha de creación |
-| `updated_at` | TIMESTAMPTZ | NO | Última actualización |
+| Columna | Tipo | Nullable | Notas |
+|---------|------|----------|-------|
+| `id` | VARCHAR(50) | NO | PK |
+| `name` | VARCHAR(100) | NO | UNIQUE |
+| `slug` | VARCHAR(100) | NO | UNIQUE |
+| `color` | VARCHAR(50) | NO | etiqueta de color UI |
+| `icon_name` | VARCHAR(50) | NO | icono lucide-react |
+| `created_at` | DATETIME | NO | |
 
 #### `documents`
-Registro de cada documento cargado al sistema.
+Un registro por documento cargado. El borrado de una categoría elimina en
+cascada sus documentos (`ondelete=CASCADE`).
 
-| Columna | Tipo | Nullable | Descripción |
-|---------|------|----------|-------------|
-| `id` | UUID | NO | PK |
-| `category_id` | UUID | NO | FK → categories.id |
-| `filename` | VARCHAR(255) | NO | Nombre interno del archivo |
-| `original_filename` | VARCHAR(500) | NO | Nombre original del archivo |
-| `file_path` | VARCHAR(1000) | NO | Ruta al archivo almacenado |
-| `mime_type` | VARCHAR(100) | NO | Tipo MIME del archivo |
-| `file_size` | BIGINT | NO | Tamaño en bytes |
-| `status` | VARCHAR(20) | NO | `pending`, `processing`, `indexed`, `error` |
-| `language` | VARCHAR(10) | SÍ | Idioma detectado (es, en, pt) |
-| `chunk_count` | INTEGER | SÍ | Cantidad de chunks generados |
-| `created_at` | TIMESTAMPTZ | NO | Fecha de carga |
-| `updated_at` | TIMESTAMPTZ | NO | Última actualización |
-| `indexed_at` | TIMESTAMPTZ | SÍ | Fecha de indexación exitosa |
+| Columna | Tipo | Nullable | Notas |
+|---------|------|----------|-------|
+| `id` | VARCHAR(50) | NO | PK (`doc_xxxx`) |
+| `name` | VARCHAR(255) | NO | nombre original |
+| `file_path` | VARCHAR(512) | NO | ruta en `UPLOAD_DIR` |
+| `category_id` | VARCHAR(50) | NO | FK → categories.id |
+| `chunks_count` | INTEGER | NO | nº de chunks indexados |
+| `status` | VARCHAR(20) | NO | `Indexando` · `Indexado` · `Fallo` |
+| `uploaded_at` | DATETIME | NO | |
 
-#### `chunks`
-Fragmentos de texto generados a partir de cada documento.
+#### `audit_logs`
+Auditoría de cada consulta del chat (pregunta, respuesta, confianza, categoría,
+citas y feedback). Alimenta el historial del admin y el botón 👍/👎.
 
-| Columna | Tipo | Nullable | Descripción |
-|---------|------|----------|-------------|
-| `id` | UUID | NO | PK |
-| `document_id` | UUID | NO | FK → documents.id |
-| `chunk_index` | INTEGER | NO | Orden del chunk en el documento |
-| `content` | TEXT | NO | Texto del chunk |
-| `qdrant_point_id` | VARCHAR(100) | SÍ | ID del punto en Qdrant |
-| `char_count` | INTEGER | NO | Cantidad de caracteres |
-| `token_count_approx` | INTEGER | SÍ | Tokens aproximados |
-| `section_title` | VARCHAR(500) | SÍ | Título de sección del documento |
-| `page_number` | INTEGER | SÍ | Número de página (si aplica) |
-| `created_at` | TIMESTAMPTZ | NO | Fecha de creación |
-
-#### `chat_sessions`
-Sesiones de conversación para mantener historial.
-
-| Columna | Tipo | Nullable | Descripción |
-|---------|------|----------|-------------|
-| `id` | UUID | NO | PK |
-| `session_token` | VARCHAR(255) | NO | Token de sesión (UNIQUE) |
-| `user_identifier` | VARCHAR(255) | SÍ | Identificador opcional del usuario |
-| `created_at` | TIMESTAMPTZ | NO | Inicio de la sesión |
-| `last_activity` | TIMESTAMPTZ | NO | Última actividad |
-
-#### `chat_messages`
-Cada mensaje (pregunta del usuario o respuesta del agente).
-
-| Columna | Tipo | Nullable | Descripción |
-|---------|------|----------|-------------|
-| `id` | UUID | NO | PK |
-| `session_id` | UUID | NO | FK → chat_sessions.id |
-| `role` | VARCHAR(20) | NO | `user` o `assistant` |
-| `content` | TEXT | NO | Contenido del mensaje |
-| `response_time_ms` | FLOAT | SÍ | Tiempo de respuesta (ms) |
-| `llm_provider` | VARCHAR(50) | SÍ | Proveedor LLM usado |
-| `llm_model` | VARCHAR(100) | SÍ | Modelo LLM usado |
-| `tokens_input` | INTEGER | SÍ | Tokens de entrada |
-| `tokens_output` | INTEGER | SÍ | Tokens de salida |
-| `confidence_score` | FLOAT | SÍ | Confianza del retrieval (0-1) |
-| `is_fallback` | BOOLEAN | NO | Si fue respuesta de fallback |
-| `created_at` | TIMESTAMPTZ | NO | Fecha del mensaje |
-
-#### `message_sources`
-Fuentes citadas en cada respuesta del agente.
-
-| Columna | Tipo | Nullable | Descripción |
-|---------|------|----------|-------------|
-| `id` | UUID | NO | PK |
-| `message_id` | UUID | NO | FK → chat_messages.id |
-| `document_id` | UUID | NO | FK → documents.id |
-| `chunk_id` | UUID | NO | FK → chunks.id |
-| `relevance_score` | FLOAT | NO | Score de similitud vectorial |
-| `rerank_score` | FLOAT | SÍ | Score del reranker |
-| `snippet` | TEXT | NO | Fragmento relevante del chunk |
-
-#### `message_feedback`
-Feedback del usuario sobre cada respuesta.
-
-| Columna | Tipo | Nullable | Descripción |
-|---------|------|----------|-------------|
-| `id` | UUID | NO | PK |
-| `message_id` | UUID | NO | FK → chat_messages.id (UNIQUE) |
-| `is_positive` | BOOLEAN | NO | Positivo o negativo |
-| `comment` | TEXT | SÍ | Comentario opcional |
-| `created_at` | TIMESTAMPTZ | NO | Fecha del feedback |
+| Columna | Tipo | Nullable | Notas |
+|---------|------|----------|-------|
+| `id` | INTEGER | NO | PK |
+| `query` | VARCHAR(1024) | NO | pregunta |
+| `response` | VARCHAR(4096) | NO | respuesta generada |
+| `confidence` | FLOAT | NO | máxima confianza de los chunks usados |
+| `category` | VARCHAR(100) | NO | filtro aplicado o `General` |
+| `feedback` | VARCHAR(20) | SÍ | `positive` · `negative` · NULL |
+| `citations` | JSON | SÍ | lista de citas (doc, página, snippet) |
+| `created_at` | DATETIME | NO | |
 
 ---
 
-## Qdrant — Modelo Vectorial
+## Qdrant — Modelo vectorial
 
-### Colección: `documents`
+### Colección `documents`
 
-```json
-{
-  "collection_name": "documents",
-  "vectors": {
-    "size": 1024,
-    "distance": "Cosine"
-  },
-  "optimizers_config": {
-    "indexing_threshold": 20000
-  },
-  "hnsw_config": {
-    "m": 16,
-    "ef_construct": 100
-  }
-}
-```
+- **Tamaño de vector**: 1024 (`QDRANT_VECTOR_SIZE`) — Cohere
+  `embed-multilingual-v3.0`.
+- **Distancia**: Cosine.
+- Creada automáticamente al arrancar (`vector_store.ensure_collection()`).
 
-### Estructura de un Punto (Point)
-
-Cada punto en Qdrant representa un chunk de documento:
+### Payload de cada punto (chunk)
 
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "vector": [0.0123, -0.0456, 0.0789, "... (1024 dimensiones)"],
+  "id": "uuid-v4",
+  "vector": [/* 1024 floats */],
   "payload": {
-    "document_id": "d47f3c2a-...",
-    "chunk_id": "c89a1b2c-...",
-    "chunk_index": 3,
-    "content": "El texto del fragmento...",
-    "category_id": "cat-rh-001",
-    "category_name": "Recursos Humanos",
-    "filename": "politica_vacaciones_2024.pdf",
-    "section_title": "Días de vacaciones por antigüedad",
-    "page_number": 5,
-    "language": "es",
-    "document_date": "2024-01-15",
-    "indexed_at": "2026-06-27T10:30:00Z"
+    "document_id": "doc_ab12cd34",
+    "document_name": "politica_vacaciones_2024.pdf",
+    "category": "Recursos Humanos",
+    "page": 5,
+    "content": "El texto del fragmento..."
   }
 }
 ```
 
-### Payload Fields (Filtros)
+### Filtros de búsqueda
 
-Los campos del payload que se usarán como filtros en la búsqueda:
+| Campo | Tipo | Uso |
+|-------|------|-----|
+| `category` | Keyword | Filtrar por categoría (chat con filtro) |
+| `document_id` | Keyword | Borrado/inspección de un documento |
 
-| Campo | Tipo Qdrant | Uso en Filtro |
-|-------|-------------|---------------|
-| `category_id` | Keyword | Filtrar por categoría |
-| `category_name` | Keyword | Filtrar por nombre de categoría |
-| `language` | Keyword | Filtrar por idioma |
-| `document_id` | Keyword | Filtrar por documento específico |
-| `filename` | Keyword | Filtrar por nombre de archivo |
-| `document_date` | Datetime | Filtrar por rango de fechas |
-| `indexed_at` | Datetime | Filtrar por fecha de indexación |
-
-### Ejemplo de Query con Filtro
-
-```json
-{
-  "vector": [0.0123, -0.0456, "..."],
-  "limit": 20,
-  "filter": {
-    "must": [
-      {
-        "key": "category_name",
-        "match": { "value": "Recursos Humanos" }
-      }
-    ]
-  },
-  "with_payload": true
-}
-```
+El umbral de relevancia se aplica sobre el **score de Cohere Rerank**
+(`CONFIDENCE_THRESHOLD`), no sobre el score vectorial crudo.
 
 ---
-
-## Índices PostgreSQL
-
-```sql
--- Categorías
-CREATE UNIQUE INDEX idx_categories_slug ON categories(slug);
-
--- Documentos
-CREATE INDEX idx_documents_category_id ON documents(category_id);
-CREATE INDEX idx_documents_status ON documents(status);
-CREATE INDEX idx_documents_created_at ON documents(created_at DESC);
-
--- Chunks
-CREATE INDEX idx_chunks_document_id ON chunks(document_id);
-CREATE INDEX idx_chunks_qdrant_point_id ON chunks(qdrant_point_id);
-
--- Chat
-CREATE INDEX idx_chat_sessions_token ON chat_sessions(session_token);
-CREATE INDEX idx_chat_messages_session_id ON chat_messages(session_id);
-CREATE INDEX idx_chat_messages_created_at ON chat_messages(created_at DESC);
-
--- Feedback
-CREATE UNIQUE INDEX idx_feedback_message_id ON message_feedback(message_id);
-CREATE INDEX idx_feedback_is_positive ON message_feedback(is_positive);
-
--- Fuentes
-CREATE INDEX idx_sources_message_id ON message_sources(message_id);
-CREATE INDEX idx_sources_document_id ON message_sources(document_id);
-```
 
 ## Migraciones (Alembic)
 
 ```
-alembic/
-├── env.py
-├── alembic.ini
+backend/alembic/
+├── env.py                          # target_metadata = app.models.orm.Base
 └── versions/
-    ├── 001_initial_schema.py
-    ├── 002_add_categories.py
-    ├── 003_add_documents.py
-    ├── 004_add_chunks.py
-    ├── 005_add_chat_sessions.py
-    ├── 006_add_chat_messages.py
-    ├── 007_add_sources_and_feedback.py
-    └── ...
+    └── 7ea92cfb1b83_initial.py     # admin_users, categories, documents, audit_logs
 ```
+
+- Generar: `alembic revision --autogenerate -m "mensaje"`
+- Aplicar: `alembic upgrade head` (el Containerfile lo ejecuta al arrancar).
+
+---
+
+## Evolución futura (no implementado)
+
+Para historial conversacional granular y trazabilidad fina se podría migrar a:
+`chat_sessions → chat_messages → message_sources` y una tabla `chunks` en
+PostgreSQL (espejo del punto de Qdrant con `qdrant_point_id`). Hoy se prioriza
+la simplicidad: el historial es plano (`audit_logs`) y el chunk es la fuente de
+verdad en Qdrant. Cualquier cambio aquí requiere nueva migración Alembic y
+ajustar el endpoint `/admin/history` y el WebSocket de chat.

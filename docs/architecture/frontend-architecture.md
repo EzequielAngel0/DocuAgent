@@ -2,9 +2,26 @@
 
 ## Visión General
 
-El frontend está construido con **Next.js 15** (App Router) y **TypeScript**, con tres áreas: **landing** (presentación pública), **chat** (interfaz conversacional pública) y **admin** (panel de administración protegido con autenticación, Turnstile y TOTP 2FA). Todo el frontend es **100% responsive** (mobile-first).
+El frontend está construido con **Next.js 16** (App Router) + **React 19** y
+**TypeScript**, con tres áreas: **landing** (pública), **chat** (conversacional
+pública por WebSocket) y **admin** (protegido con password + Turnstile + TOTP).
+Todo es **100% responsive** (mobile-first).
 
-## Estructura del Frontend
+> ⚠️ **Estado real vs. objetivo.** La estructura de abajo es el **diseño
+> objetivo**. Hoy el código es más plano:
+> - `src/app/`: `page.tsx` (landing), `chat/page.tsx`, `admin/login/page.tsx`,
+>   `admin/(dashboard)/{page,categories,documents,documents/[id]/chunks,history,layout}.tsx`,
+>   `middleware.ts` (guard `/admin/*`). **No** hay página `setup-2fa`.
+> - `src/components/`: `chat/` (`ChatArea`, `ChatSidebar`, `MessageItem`,
+>   `SourceCitations`), `landing/` (`Hero`, `Features`, `HowItWorks`,
+>   `TechStack`), `layout/` (`Navbar`, `Footer`). **No** existen `ui/` ni
+>   `admin/` como carpetas de componentes.
+> - **No** hay capas `hooks/`, `lib/` ni `types/`: las llamadas a la API REST y
+>   al WebSocket están **inline** en cada `page.tsx`, usando
+>   `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_WS_URL` (que se **inlinean en build**).
+> Extraer esa lógica a `hooks/ + lib/ + types/` es un refactor futuro.
+
+## Estructura del Frontend (objetivo)
 ```
 frontend/
 ├── src/

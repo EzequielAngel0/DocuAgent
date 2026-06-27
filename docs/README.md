@@ -40,7 +40,9 @@ docs/
 │
 ├── deployment/                        # 🚀 Despliegue
 │   ├── containerfiles.md              # Containerfiles + compose (dev/prod)
+│   ├── staging-runbook.md             # Levantar staging local (Podman + tunnel)
 │   ├── oci-setup.md                   # Deploy en Oracle Cloud (paso a paso)
+│   ├── oci-go-live.md                 # Checklist: qué falta para subir a OCI
 │   └── ci-cd.md                       # GitHub Actions (CI + build + deploy)
 │
 ├── development/                       # 👨‍💻 Desarrollo
@@ -73,8 +75,10 @@ docs/
 ### Quiero desplegar
 1. Local: [`development/local-setup.md`](development/local-setup.md)
 2. Contenedores: [`deployment/containerfiles.md`](deployment/containerfiles.md)
-3. OCI: [`deployment/oci-setup.md`](deployment/oci-setup.md)
-4. CI/CD: [`deployment/ci-cd.md`](deployment/ci-cd.md)
+3. Staging (local + tunnel): [`deployment/staging-runbook.md`](deployment/staging-runbook.md)
+4. OCI paso a paso: [`deployment/oci-setup.md`](deployment/oci-setup.md)
+5. Checklist go-live OCI: [`deployment/oci-go-live.md`](deployment/oci-go-live.md)
+6. CI/CD: [`deployment/ci-cd.md`](deployment/ci-cd.md)
 
 ### Quiero entender la seguridad
 → [`architecture/security.md`](architecture/security.md) — prompt injection, API, BD, contenedores, red

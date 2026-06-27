@@ -253,6 +253,59 @@ Se necesita contenerizar la aplicación para desarrollo local y despliegue en OC
 
 ---
 
+## ADR-012: Materialización de la arquitectura modular del backend
+
+**Fecha**: 2026-06-27
+**Estado**: ✅ Aceptada
+
+### Contexto
+La documentación describía una arquitectura modular (LangGraph, `providers/`,
+`rag/`, `ingestion/`, `models/`, `core/`) que la primera implementación no
+seguía: el backend era un par de archivos en `services/` y endpoints planos.
+
+### Decisión
+Refactorizar el backend a la estructura documentada **preservando las rutas de
+API** (`/auth`, `/admin/*`, `/chat/ws`) para no romper el frontend:
+- Agente **LangGraph** real (`agent/`): `state`, `prompts`, `graph` y 6 nodos
+  (+ `fallback`), con `prepare_context` para el streaming del WebSocket.
+- **Factory de proveedores** con cadena de fallback (`providers/`):
+  openai → gemini → anthropic → ollama (perezoso, no exige todos los SDK).
+- `rag/` (embeddings, vector_store, reranker, retrieval) e `ingestion/`
+  (extractors, cleaner, chunker, indexer) separados.
+- `core/` ampliado: `logging` (structlog), `exceptions`, `sanitizer`.
+
+### Consecuencias
+- Se eliminó la capa `services/` y los endpoints planos legacy.
+- Nuevas dependencias: `langgraph`, `langchain-anthropic`, `langchain-ollama`,
+  `structlog`.
+- El esquema relacional se mantuvo simple (`audit_logs`, sin tablas
+  `chat_*`/`chunks`); ver `database-design.md` (evolución futura).
+
+---
+
+## ADR-013: Despliegue automatizado a OCI gateado por variable
+
+**Fecha**: 2026-06-27
+**Estado**: ✅ Aceptada
+
+### Contexto
+Hay que dejar listo el camino a OCI sin tener aún la instancia provisionada, y
+sin que el pipeline falle en `main` mientras tanto.
+
+### Decisión
+- `ci.yml`: lint (ruff) + tests (pytest) + build del frontend en push/PR.
+- `deploy.yml`: build → push a OCIR + deploy por SSH (`ops/docuagent.sh`),
+  **condicionado a `vars.DEPLOY_ENABLED == 'true'`** (inactivo por defecto).
+- Healthcheck real (`/api/v1/health`) tras el deploy.
+- Build-args para `NEXT_PUBLIC_*` (se inlinean en build, no en runtime).
+
+### Consecuencias
+- Activar el deploy = crear secrets/variables + `DEPLOY_ENABLED=true`
+  (checklist en `oci-go-live.md`).
+- Staging sigue siendo local + túnel; OCI = producción.
+
+---
+
 ## Plantilla para Nuevas Decisiones
 
 ```markdown
