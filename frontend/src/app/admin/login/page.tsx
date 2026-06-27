@@ -10,6 +10,8 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [turnstileChecked, setTurnstileChecked] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [siteKey, setSiteKey] = useState<string | null>(null);
   const [totpCode, setTotpCode] = useState<string[]>(Array(6).fill(""));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -18,6 +20,43 @@ export default function AdminLoginPage() {
 
   const router = useRouter();
   const totpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // 1. Cargar script de Turnstile si la site key está presente
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+    if (key) {
+      setSiteKey(key);
+      (window as any).onloadTurnstileCallback = () => {
+        if ((window as any).turnstile) {
+          (window as any).turnstile.render("#turnstile-widget", {
+            sitekey: key,
+            theme: "dark",
+            callback: (token: string) => {
+              setTurnstileToken(token);
+              setTurnstileChecked(true);
+            },
+            "expired-callback": () => {
+              setTurnstileToken("");
+              setTurnstileChecked(false);
+            }
+          });
+        }
+      };
+
+      const script = document.createElement("script");
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+
+      return () => {
+        if (document.head.contains(script)) {
+          document.head.removeChild(script);
+        }
+        delete (window as any).onloadTurnstileCallback;
+      };
+    }
+  }, []);
 
   // Limpiar error al escribir
   useEffect(() => {
@@ -33,29 +72,50 @@ export default function AdminLoginPage() {
       return;
     }
 
-    if (!turnstileChecked) {
-      setError("Por favor, completa el desafío anti-bot.");
+    if (siteKey && !turnstileToken) {
+      setError("Por favor, completa el desafío anti-bot (Turnstile).");
       return;
     }
 
-    // Credenciales mockeadas: admin@empresa.com / admin
-    if (email === "admin@empresa.com" && password === "admin") {
-      setLoading(true);
-      setError(null);
-      setTimeout(() => {
-        setStep(2);
-        setLoading(false);
-      }, 800);
-    } else {
-      const nextAttempts = attempts + 1;
-      setAttempts(nextAttempts);
-      if (nextAttempts >= 5) {
-        setIsLocked(true);
-        setError("Cuenta bloqueada temporalmente por exceso de intentos (5 fallidos).");
-      } else {
-        setError(`Credenciales inválidas. Intentos fallidos: ${nextAttempts}/5.`);
-      }
+    if (!siteKey && !turnstileChecked) {
+      setError("Por favor, completa el desafío de seguridad mock.");
+      return;
     }
+
+    setLoading(true);
+    setError(null);
+
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+
+    fetch(`${baseUrl}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email,
+        password: password,
+        turnstile_token: turnstileToken || "mock_turnstile"
+      })
+    })
+    .then(async (res) => {
+      setLoading(false);
+      if (res.ok) {
+        setStep(2);
+      } else {
+        const errData = await res.json();
+        setError(errData.detail || "Credenciales incorrectas.");
+        const nextAttempts = attempts + 1;
+        setAttempts(nextAttempts);
+        if (nextAttempts >= 5) {
+          setIsLocked(true);
+          setError("Cuenta bloqueada temporalmente por exceso de intentos (5 fallidos).");
+        }
+      }
+    })
+    .catch((err) => {
+      setLoading(false);
+      setError("No se pudo conectar con el servidor de autenticación.");
+      console.error(err);
+    });
   };
 
   const handleTotpChange = (index: number, value: string) => {
@@ -91,23 +151,39 @@ export default function AdminLoginPage() {
       return;
     }
 
-    // Código TOTP de prueba: 123456
-    if (finalCode === "123456") {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      setTimeout(() => {
-        // Escribir la cookie de autenticación real en el cliente para el middleware
-        document.cookie = "auth_token=mock_jwt_token_docuagent_staging; path=/; max-age=900; SameSite=Lax";
-        
-        // Redirigir al dashboard con recarga completa para asegurar envío de cookie
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+
+    fetch(`${baseUrl}/auth/verify-2fa`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email,
+        code: finalCode
+      })
+    })
+    .then(async (res) => {
+      setLoading(false);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          document.cookie = `auth_token=${data.access_token}; path=/; max-age=604800; SameSite=Lax`;
+        }
         window.location.href = "/admin";
-      }, 1000);
-    } else {
-      setError("Código TOTP inválido. Intenta de nuevo.");
-      setTotpCode(Array(6).fill(""));
-      totpRefs.current[0]?.focus();
-    }
+      } else {
+        const errData = await res.json();
+        setError(errData.detail || "Código 2FA incorrecto.");
+        setTotpCode(Array(6).fill(""));
+        totpRefs.current[0]?.focus();
+      }
+    })
+    .catch((err) => {
+      setLoading(false);
+      setError("Error de conexión al verificar el código 2FA.");
+      console.error(err);
+    });
   };
 
   return (
@@ -175,25 +251,35 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
-              {/* CLOUDFLARE TURNSTILE MOCK */}
-              <div className="turnstile-mock-container">
-                <div className="turnstile-mock-box flex items-center justify-between">
-                  <label className="turnstile-checkbox-label flex items-center">
-                    <input
-                      type="checkbox"
-                      className="turnstile-checkbox"
-                      checked={turnstileChecked}
-                      onChange={(e) => setTurnstileChecked(e.target.checked)}
-                      disabled={loading || isLocked}
-                    />
-                    <span className="turnstile-checkbox-text">No soy un robot (Cloudflare Turnstile)</span>
-                  </label>
-                  <div className="turnstile-brand">
-                    <ShieldCheck size={18} className="icon-olive" />
-                    <span>Verificado</span>
+              {/* CLOUDFLARE TURNSTILE WIDGET O FALLBACK MOCK */}
+              {siteKey ? (
+                <div style={{ display: "flex", justifyContent: "center", margin: "var(--space-md) 0" }}>
+                  <div id="turnstile-widget"></div>
+                </div>
+              ) : (
+                <div className="turnstile-mock-container">
+                  <div className="turnstile-mock-box flex items-center justify-between">
+                    <label className="turnstile-checkbox-label flex items-center">
+                      <input
+                        type="checkbox"
+                        className="turnstile-checkbox"
+                        checked={turnstileChecked}
+                        onChange={(e) => {
+                          setTurnstileChecked(e.target.checked);
+                          if (e.target.checked) setTurnstileToken("mock_turnstile");
+                          else setTurnstileToken("");
+                        }}
+                        disabled={loading || isLocked}
+                      />
+                      <span className="turnstile-checkbox-text">No soy un robot (Cloudflare Turnstile Mock)</span>
+                    </label>
+                    <div className="turnstile-brand">
+                      <ShieldCheck size={18} className="icon-olive" />
+                      <span>Verificado</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               <button
                 type="submit"

@@ -46,20 +46,25 @@ async def verify_turnstile(token: str) -> bool:
         return False
 
 async def ensure_default_admin(db: AsyncSession):
-    """Garantiza la existencia del administrador por defecto.
+    """Garantiza la existencia del administrador con las credenciales de configuración.
     """
-    result = await db.execute(select(AdminUser).where(AdminUser.email == "admin@empresa.com"))
+    result = await db.execute(select(AdminUser).where(AdminUser.email == settings.ADMIN_EMAIL))
     admin = result.scalars().first()
     if not admin:
         # Crear administrador semilla
         new_admin = AdminUser(
-            email="admin@empresa.com",
-            password_hash=get_password_hash("admin"),
-            # Secreto TOTP por defecto inicializado para pruebas
-            totp_secret="JBSWY3DPEHPK3PXP",  
+            email=settings.ADMIN_EMAIL,
+            password_hash=get_password_hash(settings.ADMIN_PASSWORD),
+            totp_secret=settings.ADMIN_TOTP_SECRET,  
             is_totp_enabled=True
         )
         db.add(new_admin)
+        await db.commit()
+    else:
+        # Sincronizar credenciales si cambiaron en el archivo .env
+        admin.password_hash = get_password_hash(settings.ADMIN_PASSWORD)
+        admin.totp_secret = settings.ADMIN_TOTP_SECRET
+        db.add(admin)
         await db.commit()
 
 @router.post("/login")

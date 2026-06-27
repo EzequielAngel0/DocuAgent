@@ -1,39 +1,91 @@
 "use client";
 
-import { Files, FileText, HeartHandshake, HelpCircle, ThumbsUp, ThumbsDown, ArrowUpRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Files, FileText, HeartHandshake, HelpCircle, ThumbsDown, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
+interface Document {
+  chunks_count: number;
+}
+
+interface AuditLog {
+  id: number;
+  query: string;
+  response: string;
+  confidence: number;
+  category: string;
+  created_at: string;
+  feedback: "positive" | "negative" | null;
+}
+
 export default function AdminDashboardPage() {
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("auth_token="))
+        ?.split("=")[1];
+
+      try {
+        // Cargar documentos
+        const docsRes = await fetch(`${baseUrl}/admin/documents`, {
+          headers: { "Authorization": `Bearer ${token || ""}` }
+        });
+        if (docsRes.ok) {
+          const docsData = await docsRes.json();
+          setDocuments(docsData);
+        }
+
+        // Cargar historial
+        const logsRes = await fetch(`${baseUrl}/admin/history`, {
+          headers: { "Authorization": `Bearer ${token || ""}` }
+        });
+        if (logsRes.ok) {
+          const logsData = await logsRes.json();
+          setLogs(logsData);
+        }
+      } catch (err) {
+        console.error("Error al cargar datos del dashboard:", err);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  // Calcular estadísticas dinámicas
+  const totalDocs = documents.length;
+  const totalChunks = documents.reduce((acc, curr) => acc + curr.chunks_count, 0);
+  const totalQueries = logs.length;
+
+  const ratedLogs = logs.filter((l) => l.feedback === "positive" || l.feedback === "negative");
+  const positiveCount = logs.filter((l) => l.feedback === "positive").length;
+  const positiveRate = ratedLogs.length > 0 
+    ? ((positiveCount / ratedLogs.length) * 100).toFixed(1) + "%" 
+    : "100%";
+
   const stats = [
-    { name: "Documentos", value: "14", desc: "Archivos activos", icon: <Files size={20} className="icon-terracotta" /> },
-    { name: "Chunks Indexados", value: "432", desc: "Fragmentos vectoriales", icon: <FileText size={20} className="icon-bronze" /> },
-    { name: "Consultas Totales", value: "1,280", desc: "Consultas realizadas", icon: <HelpCircle size={20} className="icon-olive" /> },
-    { name: "Feedback Positivo", value: "89.2%", desc: "1,142 valoraciones 👍", icon: <HeartHandshake size={20} className="icon-terracotta" /> },
+    { name: "Documentos", value: String(totalDocs), desc: "Archivos activos", icon: <Files size={20} className="icon-terracotta" /> },
+    { name: "Chunks Indexados", value: String(totalChunks), desc: "Fragmentos vectoriales", icon: <FileText size={20} className="icon-bronze" /> },
+    { name: "Consultas Totales", value: String(totalQueries), desc: "Consultas realizadas", icon: <HelpCircle size={20} className="icon-olive" /> },
+    { name: "Feedback Positivo", value: positiveRate, desc: `${positiveCount} valoraciones 👍`, icon: <HeartHandshake size={20} className="icon-terracotta" /> },
   ];
 
-  const worstFeedbackQuestions = [
-    {
-      question: "¿Cómo solicito reembolso de Uber en fines de semana?",
-      category: "Finanzas",
-      date: "2026-06-25",
-      confidence: "28%",
-      reason: "Las fuentes no detallan reembolsos fuera de horario hábil.",
-    },
-    {
-      question: "¿Cuál es la política de asuetos obligatorios 2026?",
-      category: "Recursos Humanos",
-      date: "2026-06-24",
-      confidence: "35%",
-      reason: "El Manual_Onboarding cargado está desactualizado (versión 2025).",
-    },
-    {
-      question: "¿Cómo configuro el túnel con Docker Compose local?",
-      category: "Seguridad",
-      date: "2026-06-22",
-      confidence: "42%",
-      reason: "La documentación local solo cubre Podman en Windows.",
-    },
-  ];
+  // Obtener las 3 preguntas peor valoradas (feedback negativo ordenado por menor confianza)
+  const worstFeedbackQuestions = logs
+    .filter((l) => l.feedback === "negative")
+    .sort((a, b) => a.confidence - b.confidence)
+    .slice(0, 3)
+    .map((l) => ({
+      question: l.query,
+      category: l.category,
+      date: l.created_at.split("T")[0],
+      confidence: `${l.confidence}%`,
+      reason: l.response.length > 80 ? l.response.substring(0, 78) + "..." : l.response,
+    }));
 
   return (
     <div className="dashboard-wrapper fade-in">
@@ -56,86 +108,59 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      {/* CHARTS & TABLES ROW */}
-      <div className="dashboard-grid">
-        {/* FEEDBACK DISTRIBUTION */}
-        <div className="card dashboard-card">
-          <div className="card-header">
-            <h4>Distribución de Feedback</h4>
-          </div>
-          <div className="card-body">
-            <div className="feedback-chart-wrapper">
-              <div className="feedback-bar-container">
-                <div className="feedback-bar-positive" style={{ width: "89.2%" }} title="89.2% Positivo"></div>
-                <div className="feedback-bar-negative" style={{ width: "10.8%" }} title="10.8% Negativo"></div>
-              </div>
-              <div className="feedback-chart-legend flex justify-between">
-                <div className="legend-item flex items-center">
-                  <span className="legend-dot positive"></span>
-                  <span>Útiles (89.2%)</span>
-                </div>
-                <div className="legend-item flex items-center">
-                  <span className="legend-dot negative"></span>
-                  <span>Incorrectas (10.8%)</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="dashboard-quick-actions">
-              <h5>Acciones Recomendadas</h5>
-              <ul className="quick-actions-list">
-                <li className="flex items-center justify-between">
-                  <span>Actualizar manuales de asuetos 2026</span>
-                  <Link href="/admin/documents" className="quick-action-link flex items-center">
-                    Subir <ArrowUpRight size={14} style={{ marginLeft: "4px" }} />
-                  </Link>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span>Revisar logs de preguntas con baja confianza</span>
-                  <Link href="/admin/history" className="quick-action-link flex items-center">
-                    Ver <ArrowUpRight size={14} style={{ marginLeft: "4px" }} />
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* WORST QUESTIONS */}
-        <div className="card dashboard-card">
-          <div className="card-header">
-            <h4>Preguntas con Peor Calificación</h4>
+      {/* DETALLES DE RETROALIMENTACIÓN */}
+      <div className="dashboard-sections-grid" style={{ marginTop: "var(--space-lg)" }}>
+        {/* PEOR RATING */}
+        <div className="card admin-card">
+          <div className="card-header flex items-center justify-between">
+            <h4>Preguntas Peor Valoradas (Feedback 👎)</h4>
+            <Link href="/admin/history" className="btn btn-secondary flex items-center" style={{ fontSize: "0.8rem", padding: "4px 8px" }}>
+              Ver todo
+              <ArrowUpRight size={14} style={{ marginLeft: "4px" }} />
+            </Link>
           </div>
           <div className="card-body" style={{ padding: 0 }}>
-            <div className="table-responsive">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Pregunta</th>
-                    <th>Confianza</th>
-                    <th>Motivo de Fallo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {worstFeedbackQuestions.map((item, idx) => (
-                    <tr key={idx}>
-                      <td style={{ maxWidth: "200px" }}>
-                        <div style={{ fontWeight: 500, fontSize: "0.85rem" }}>{item.question}</div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                          {item.category} · {item.date}
-                        </div>
-                      </td>
-                      <td>
-                        <span className="badge-confidence low">{item.confidence}</span>
-                      </td>
-                      <td style={{ fontSize: "0.8rem", color: "var(--text-terracotta)" }}>
-                        {item.reason}
-                      </td>
+            {worstFeedbackQuestions.length === 0 ? (
+              <div style={{ padding: "var(--space-xl)", textAlign: "center", color: "var(--text-secondary)" }}>
+                <HeartHandshake size={36} style={{ margin: "0 auto var(--space-sm)", opacity: 0.3 }} />
+                <p style={{ fontSize: "0.9rem" }}>¡Excelente! No hay respuestas con feedback negativo registrados.</p>
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Pregunta</th>
+                      <th>Área</th>
+                      <th>Fecha</th>
+                      <th>Confianza</th>
+                      <th>Respuesta del Agente</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {worstFeedbackQuestions.map((q, idx) => (
+                      <tr key={idx}>
+                        <td>
+                          <span className="table-log-query" style={{ maxWidth: "200px" }} title={q.question}>{q.question}</span>
+                        </td>
+                        <td>
+                          <span className="badge-category">{q.category}</span>
+                        </td>
+                        <td style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                          {q.date}
+                        </td>
+                        <td>
+                          <span className="badge-confidence low">{q.confidence}</span>
+                        </td>
+                        <td style={{ fontSize: "0.8rem", color: "var(--text-secondary)", maxWidth: "200px" }} title={q.reason}>
+                          {q.reason}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     LANGCHAIN_API_KEY: Optional[str] = None
     LANGCHAIN_PROJECT: str = "docuagent-staging"
 
+    # Credenciales de Administrador por defecto configurables
+    ADMIN_EMAIL: str = "admin@empresa.com"
+    ADMIN_PASSWORD: str = "admin"
+    ADMIN_TOTP_SECRET: str = "JBSWY3DPEHPK3PXP"
+
     # JWT Autenticación
     JWT_SECRET_KEY: str = "cambiar_por_un_secreto_super_seguro_de_64_caracteres_por_defecto"
     JWT_ACCESS_EXPIRE_MINUTES: int = 15

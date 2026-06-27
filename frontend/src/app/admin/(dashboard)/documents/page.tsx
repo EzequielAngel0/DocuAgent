@@ -7,47 +7,87 @@ import Link from "next/link";
 interface Document {
   id: string;
   name: string;
-  category: string;
-  uploadedAt: string;
-  chunksCount: number;
+  category_id: string;
+  uploaded_at: string;
+  chunks_count: number;
   status: "Indexando" | "Indexado" | "Fallo";
+}
+
+interface CategoryData {
+  id: string;
+  name: string;
 }
 
 export default function AdminDocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [uploadCategory, setUploadCategory] = useState("Recursos Humanos");
+  const [uploadCategoryId, setUploadCategoryId] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [reindexingId, setReindexingId] = useState<string | null>(null);
-  const [categories, setCategories] = useState<string[]>(["Recursos Humanos", "Finanzas", "Seguridad", "General"]);
+  const [categories, setCategories] = useState<CategoryData[]>([]);
 
-  // Inicializar documentos
+  // 1. Cargar datos iniciales del backend (documentos y categorías reales)
   useEffect(() => {
-    const savedDocs = localStorage.getItem("admin_documents");
-    if (savedDocs) {
-      setDocuments(JSON.parse(savedDocs));
-    } else {
-      const initialDocs: Document[] = [
-        { id: "doc_1", name: "manual_onboarding.pdf", category: "Recursos Humanos", uploadedAt: "2026-06-20", chunksCount: 45, status: "Indexado" },
-        { id: "doc_2", name: "politica_gastos.pdf", category: "Finanzas", uploadedAt: "2026-06-21", chunksCount: 12, status: "Indexado" },
-        { id: "doc_3", name: "security.md", category: "Seguridad", uploadedAt: "2026-06-22", chunksCount: 8, status: "Indexado" },
-      ];
-      setDocuments(initialDocs);
-      localStorage.setItem("admin_documents", JSON.stringify(initialDocs));
-    }
+    const loadInitialData = async () => {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("auth_token="))
+        ?.split("=")[1];
 
-    // Cargar categorías si existen en localStorage
-    const savedCats = localStorage.getItem("admin_categories");
-    if (savedCats) {
-      const parsedCats = JSON.parse(savedCats);
-      setCategories(parsedCats.map((c: any) => c.name));
-    }
+      try {
+        // Cargar categorías
+        const catsRes = await fetch(`${baseUrl}/admin/categories`, {
+          headers: { "Authorization": `Bearer ${token || ""}` }
+        });
+        if (catsRes.ok) {
+          const catsData = await catsRes.json();
+          setCategories(catsData);
+          if (catsData.length > 0) {
+            setUploadCategoryId(catsData[0].id);
+          }
+        }
+
+        // Cargar documentos
+        const docsRes = await fetch(`${baseUrl}/admin/documents`, {
+          headers: { "Authorization": `Bearer ${token || ""}` }
+        });
+        if (docsRes.ok) {
+          const docsData = await docsRes.json();
+          setDocuments(docsData);
+        }
+      } catch (err) {
+        console.error("Error al cargar datos iniciales:", err);
+      }
+    };
+    loadInitialData();
   }, []);
 
-  const saveDocs = (newDocs: Document[]) => {
-    setDocuments(newDocs);
-    localStorage.setItem("admin_documents", JSON.stringify(newDocs));
-  };
+  // 2. Polling inteligente: refrescar lista de documentos mientras haya alguno en estado "Indexando"
+  useEffect(() => {
+    const hasIndexingDocs = documents.some((d) => d.status === "Indexando");
+    if (hasIndexingDocs) {
+      const interval = setInterval(async () => {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+        const token = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("auth_token="))
+          ?.split("=")[1];
+        try {
+          const res = await fetch(`${baseUrl}/admin/documents`, {
+            headers: { "Authorization": `Bearer ${token || ""}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setDocuments(data);
+          }
+        } catch (err) {
+          console.error("Error al refrescar documentos:", err);
+        }
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [documents]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -55,59 +95,123 @@ export default function AdminDocumentsPage() {
     }
   };
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadFile) return;
 
     setUploadProgress(10);
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev === null) return 0;
-        if (prev >= 100) {
-          clearInterval(interval);
-          
-          // Guardar el nuevo documento
-          const newDoc: Document = {
-            id: "doc_" + Date.now(),
-            name: uploadFile.name,
-            category: uploadCategory,
-            uploadedAt: new Date().toISOString().split("T")[0],
-            chunksCount: Math.floor(Math.random() * 30) + 5,
-            status: "Indexado",
-          };
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("auth_token="))
+      ?.split("=")[1];
 
-          saveDocs([newDoc, ...documents]);
-          setUploadFile(null);
-          
-          // Reset progress bar after completion animation
-          setTimeout(() => setUploadProgress(null), 800);
-          return 100;
-        }
-        return prev + 30;
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      formData.append("category_id", uploadCategoryId);
+
+      setUploadProgress(40);
+      const res = await fetch(`${baseUrl}/admin/documents/upload`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token || ""}`
+        },
+        body: formData
       });
-    }, 200);
+
+      setUploadProgress(80);
+      if (!res.ok) {
+        throw new Error("No se pudo cargar el documento.");
+      }
+
+      const newDoc = await res.json();
+      setDocuments((prev) => [newDoc, ...prev]);
+      setUploadProgress(100);
+      setUploadFile(null);
+
+      // Limpiar barra de progreso
+      setTimeout(() => setUploadProgress(null), 800);
+    } catch (err: any) {
+      console.error(err);
+      alert("Error al subir archivo: " + err.message);
+      setUploadProgress(null);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    const updated = documents.filter((doc) => doc.id !== id);
-    saveDocs(updated);
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar este documento y todos sus vectores indexados en Qdrant?")) return;
+
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("auth_token="))
+      ?.split("=")[1];
+
+    try {
+      const res = await fetch(`${baseUrl}/admin/documents/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token || ""}`
+        }
+      });
+      if (res.ok) {
+        setDocuments((prev) => prev.filter((doc) => doc.id !== id));
+      } else {
+        alert("No se pudo eliminar el documento.");
+      }
+    } catch (err) {
+      console.error("Error al eliminar documento:", err);
+    }
   };
 
-  const handleReindex = (id: string) => {
+  const handleReindex = async (id: string) => {
     setReindexingId(id);
-    // Cambiar estado a indexando
-    const updated = documents.map((doc) => 
-      doc.id === id ? { ...doc, status: "Indexando" as const } : doc
-    );
-    saveDocs(updated);
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("auth_token="))
+      ?.split("=")[1];
 
-    setTimeout(() => {
-      const finished = documents.map((doc) => 
-        doc.id === id ? { ...doc, status: "Indexado" as const } : doc
+    try {
+      // Actualización optimista de interfaz
+      setDocuments((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, status: "Indexando" as const } : d))
       );
-      saveDocs(finished);
+
+      const res = await fetch(`${baseUrl}/admin/documents/${id}/reindex`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token || ""}`
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error("No se pudo reindexar.");
+      }
+
+      const updatedDoc = await res.json();
+      setDocuments((prev) =>
+        prev.map((d) => (d.id === id ? updatedDoc : d))
+      );
+    } catch (err) {
+      console.error("Error al reindexar:", err);
+      setDocuments((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, status: "Fallo" as const } : d))
+      );
+    } finally {
       setReindexingId(null);
-    }, 1500);
+    }
+  };
+
+  const getCategoryName = (catId: string) => {
+    const cat = categories.find((c) => c.id === catId);
+    return cat ? cat.name : "General";
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "-";
+    return dateStr.split("T")[0];
   };
 
   return (
@@ -129,48 +233,50 @@ export default function AdminDocumentsPage() {
                 <label className="form-label">Categoría Asociada</label>
                 <select
                   className="form-input"
-                  value={uploadCategory}
-                  onChange={(e) => setUploadCategory(e.target.value)}
+                  value={uploadCategoryId}
+                  onChange={(e) => setUploadCategoryId(e.target.value)}
                 >
-                  {categories.map((cat, idx) => (
-                    <option key={idx} value={cat}>{cat}</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>
               </div>
 
-              <div className="upload-dropzone">
-                <input
-                  type="file"
-                  id="file-upload-input"
-                  className="upload-input-file"
-                  onChange={handleFileChange}
-                  accept=".pdf,.docx,.xlsx,.csv,.md,.html,.txt"
-                />
-                <label htmlFor="file-upload-input" className="upload-label flex flex-col items-center justify-center">
-                  <Upload size={32} className="upload-icon-style" />
-                  <span className="upload-title">
-                    {uploadFile ? uploadFile.name : "Selecciona o arrastra un archivo"}
-                  </span>
-                  <span className="upload-formats">
-                    Formatos soportados: PDF, DOCX, XLSX, CSV, MD, HTML, TXT
-                  </span>
-                </label>
+              <div className="form-group">
+                <label className="form-label">Seleccionar Archivo</label>
+                <div className="file-drop-zone">
+                  <Upload size={32} className="icon-terracotta" style={{ marginBottom: "var(--space-sm)" }} />
+                  <input
+                    type="file"
+                    id="file-upload-input"
+                    className="file-hidden-input"
+                    onChange={handleFileChange}
+                    accept=".pdf,.docx,.xlsx,.xls,.csv,.md,.txt,.html,.json"
+                  />
+                  <label htmlFor="file-upload-input" className="file-drop-label">
+                    {uploadFile ? (
+                      <span className="file-name-highlight">{uploadFile.name}</span>
+                    ) : (
+                      "Arrastra un archivo o haz clic para buscar"
+                    )}
+                  </label>
+                  <span className="file-drop-sub">Soporta PDF, DOCX, XLSX, CSV, MD, JSON</span>
+                </div>
               </div>
 
               {uploadProgress !== null && (
-                <div className="upload-progress-bar-container">
-                  <div className="upload-progress-fill" style={{ width: `${uploadProgress}%` }}></div>
-                  <span className="upload-progress-text">Procesando chunks... {uploadProgress}%</span>
+                <div className="progress-bar-container">
+                  <div className="progress-bar" style={{ width: `${uploadProgress}%` }}></div>
+                  <span className="progress-text">{uploadProgress}% Indexando...</span>
                 </div>
               )}
 
               <button
                 type="submit"
-                className="btn btn-primary upload-submit-btn"
+                className="btn btn-primary w-full"
                 disabled={!uploadFile || uploadProgress !== null}
-                style={{ width: "100%" }}
               >
-                Subir e Indexar
+                Comenzar Indexación
               </button>
             </form>
           </div>
@@ -179,22 +285,25 @@ export default function AdminDocumentsPage() {
         {/* LISTADO DE DOCUMENTOS */}
         <div className="card admin-card">
           <div className="card-header">
-            <h4>Documentos Indexados ({documents.length})</h4>
+            <h4>Documentos Cargados</h4>
           </div>
           <div className="card-body" style={{ padding: 0 }}>
             {documents.length === 0 ? (
-              <p style={{ padding: "var(--space-lg)", textAlign: "center", color: "var(--text-secondary)" }}>
-                No hay documentos indexados. Sube tu primer archivo.
-              </p>
+              <div style={{ padding: "var(--space-xl)", textAlign: "center", color: "var(--text-secondary)" }}>
+                <FileText size={48} style={{ margin: "0 auto var(--space-md)", opacity: 0.3 }} />
+                <p>No hay documentos indexados todavía.</p>
+              </div>
             ) : (
               <div className="table-responsive">
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th>Documento</th>
+                      <th>Nombre</th>
                       <th>Categoría</th>
+                      <th>Subido</th>
+                      <th>Chunks</th>
                       <th>Estado</th>
-                      <th>Acciones</th>
+                      <th style={{ textAlign: "right" }}>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -203,56 +312,48 @@ export default function AdminDocumentsPage() {
                         <td>
                           <div className="flex items-center">
                             <FileText size={16} className="icon-terracotta" style={{ marginRight: "8px", flexShrink: 0 }} />
-                            <div>
-                              <div style={{ fontWeight: 500, fontSize: "0.85rem" }}>{doc.name}</div>
-                              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                                {doc.uploadedAt} · {doc.chunksCount} chunks
-                              </div>
-                            </div>
+                            <span className="table-doc-name" title={doc.name}>{doc.name}</span>
                           </div>
                         </td>
                         <td>
-                          <span className="badge-category">{doc.category}</span>
+                          <span className="badge-category">{getCategoryName(doc.category_id)}</span>
+                        </td>
+                        <td style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                          {formatDate(doc.uploaded_at)}
+                        </td>
+                        <td style={{ textAlign: "center", fontWeight: "bold" }}>
+                          {doc.status === "Indexando" ? "-" : doc.chunks_count}
                         </td>
                         <td>
                           <span className={`badge-status ${doc.status.toLowerCase()}`}>
-                            {doc.status === "Indexando" ? (
-                              <RotateCw className="spin" size={12} style={{ marginRight: "4px" }} />
-                            ) : doc.status === "Indexado" ? (
-                              <CheckCircle size={12} style={{ marginRight: "4px" }} />
-                            ) : (
-                              <AlertCircle size={12} style={{ marginRight: "4px" }} />
-                            )}
+                            {doc.status === "Indexando" && <RotateCw size={10} className="spin" style={{ marginRight: "4px" }} />}
+                            {doc.status === "Indexado" && <CheckCircle size={10} style={{ marginRight: "4px" }} />}
+                            {doc.status === "Fallo" && <AlertCircle size={10} style={{ marginRight: "4px" }} />}
                             {doc.status}
                           </span>
                         </td>
-                        <td>
-                          <div className="flex items-center gap-sm">
+                        <td style={{ textAlign: "right" }}>
+                          <div className="flex justify-end gap-sm">
+                            <Link
+                              href={`/admin/documents/${doc.id}/chunks`}
+                              className="btn btn-action"
+                              title="Ver fragmentos vectoriales"
+                            >
+                              <ChevronRight size={14} />
+                            </Link>
                             <button
-                              className="btn-table-action"
+                              className="btn btn-action"
                               onClick={() => handleReindex(doc.id)}
-                              disabled={reindexingId === doc.id || doc.status === "Indexando"}
+                              disabled={doc.status === "Indexando" || reindexingId === doc.id}
                               title="Re-indexar documento"
-                              aria-label="Re-indexar"
                             >
                               <RotateCw size={14} className={reindexingId === doc.id ? "spin" : ""} />
                             </button>
-                            
-                            <a
-                              href={`/admin/documents/${doc.id}/chunks`}
-                              className="btn-table-action flex items-center justify-center"
-                              title="Ver fragmentos (chunks)"
-                              aria-label="Ver fragmentos"
-                            >
-                              <ChevronRight size={14} />
-                            </a>
-
                             <button
-                              className="btn-table-action danger"
+                              className="btn btn-action danger"
                               onClick={() => handleDelete(doc.id)}
                               disabled={doc.status === "Indexando"}
-                              title="Eliminar del RAG"
-                              aria-label="Eliminar"
+                              title="Eliminar de RAG"
                             >
                               <Trash2 size={14} />
                             </button>

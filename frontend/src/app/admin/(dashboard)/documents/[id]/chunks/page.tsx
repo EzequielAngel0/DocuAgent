@@ -24,56 +24,62 @@ export default function ChunksPage({
   const resolvedParams = use(params);
   const docId = resolvedParams.id;
 
-  const [documentName, setDocumentName] = useState("documento_seleccionado.pdf");
+  const [documentName, setDocumentName] = useState("");
   const [chunks, setChunks] = useState<Chunk[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Buscar nombre del documento en localStorage
-    const savedDocs = localStorage.getItem("admin_documents");
-    if (savedDocs) {
-      const docs = JSON.parse(savedDocs);
-      const found = docs.find((d: any) => d.id === docId);
-      if (found) {
-        setDocumentName(found.name);
-      } else {
-        // Fallback si el ID no es secuencial sino un string directo
-        setDocumentName(docId.replace(/%20/g, " "));
+    const fetchChunks = async () => {
+      try {
+        setLoading(true);
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+        
+        // Leer cookie auth_token
+        const token = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("auth_token="))
+          ?.split("=")[1];
+
+        const res = await fetch(`${baseUrl}/admin/documents/${docId}/chunks`, {
+          headers: {
+            "Authorization": `Bearer ${token || ""}`,
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error("No se pudieron cargar los fragmentos vectoriales.");
+        }
+
+        const data = await res.json();
+        
+        // Mapear los datos de Qdrant a nuestro estado
+        const mappedChunks: Chunk[] = data.map((item: any, idx: number) => ({
+          index: idx + 1,
+          text: item.content,
+          vectorSnippet: `[${item.vector.map((v: number) => v.toFixed(3)).join(", ")}, ...]`,
+          tokens: Math.floor(item.content.split(/\s+/).length * 1.3),  // Estimación de tokens
+          metadata: {
+            page: `Pág. ${item.page}`,
+            language: "es",
+          },
+        }));
+
+        setChunks(mappedChunks);
+        if (data.length > 0) {
+          setDocumentName(data[0].document_name);
+        } else {
+          setDocumentName("Documento");
+        }
+      } catch (err: any) {
+        setError(err.message || "Error al conectar con el backend.");
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
 
-    // Generar chunks simulados
-    const generatedChunks: Chunk[] = [
-      {
-        index: 1,
-        text: "DocuAgent es la plataforma centralizada para consulta y búsqueda de información dentro de nuestra organización. Utiliza un pipeline RAG (Retrieval-Augmented Generation) para recuperar fragmentos de manuales de políticas y proveer respuestas contextualizadas mediante modelos de lenguaje autorizados.",
-        vectorSnippet: "[0.142, -0.589, 0.912, 0.045, -0.312, 0.771, ...]",
-        tokens: 64,
-        metadata: { page: "Pág. 1", language: "es" },
-      },
-      {
-        index: 2,
-        text: "Las solicitudes de vacaciones anuales deben coordinarse con tu supervisor directo con un mínimo de 15 días de anticipación. El periodo vacacional anual remunerado consta de 15 días laborables por año de servicio continuo y no es acumulable por más de dos años consecutivos.",
-        vectorSnippet: "[-0.201, 0.442, 0.812, 0.551, -0.108, 0.622, ...]",
-        tokens: 61,
-        metadata: { page: "Pág. 2", language: "es" },
-      },
-      {
-        index: 3,
-        text: "El reembolso de gastos de viaje y comidas de representación debe cargarse en el portal administrativo con su factura XML (CFDI) correspondiente dentro de los 5 días hábiles siguientes al gasto. Gastos mayores a $50 USD requieren la aprobación previa del Gerente de Área.",
-        vectorSnippet: "[0.005, -0.198, 0.718, 0.223, 0.481, -0.092, ...]",
-        tokens: 58,
-        metadata: { page: "Pág. 4", language: "es" },
-      },
-      {
-        index: 4,
-        text: "Las bases de datos Qdrant (vectorial) y PostgreSQL (relacional) se ejecutan aisladas en la red privada de Podman. La autenticación de la consola requiere validación de doble factor (2FA) por TOTP. Todos los secretos en producción se consumen dinámicamente de OCI Vault.",
-        vectorSnippet: "[-0.512, 0.774, -0.211, 0.089, -0.404, 0.822, ...]",
-        tokens: 55,
-        metadata: { page: "Pág. 6", language: "es" },
-      },
-    ];
-
-    setChunks(generatedChunks);
+    fetchChunks();
   }, [docId]);
 
   return (
