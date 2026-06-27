@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Bot } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -9,7 +8,7 @@ export default function Footer() {
       <div className="footer-container">
         <div className="footer-brand">
           <div className="footer-logo">
-            <Bot className="footer-logo-icon" size={20} />
+            <img src="/logo.svg" alt="DocuAgent Logo" width="20" height="20" className="footer-logo-img" />
             <span className="footer-logo-text">Docu<span>Agent</span></span>
           </div>
           <p className="footer-description">
@@ -23,14 +22,13 @@ export default function Footer() {
             <ul>
               <li><Link href="/">Inicio</Link></li>
               <li><Link href="/chat">Chat de Consulta</Link></li>
-              <li><Link href="/admin">Panel de Administración</Link></li>
             </ul>
           </div>
 
           <div className="footer-links-group">
             <h4 className="footer-links-title">Proyecto</h4>
             <ul>
-              <li><a href="https://github.com" target="_blank" rel="noopener noreferrer">Repositorio</a></li>
+              <li><a href="https://github.com/EzequielAngel0/AluraAgente" target="_blank" rel="noopener noreferrer">Repositorio</a></li>
               <li><Link href="/docs">Documentación</Link></li>
             </ul>
           </div>
@@ -43,7 +41,7 @@ export default function Footer() {
             &copy; {currentYear} DocuAgent. Desarrollado como proyecto para el programa de formación en IA de Alura LATAM.
           </p>
           <a
-            href="https://github.com"
+            href="https://github.com/EzequielAngel0/AluraAgente"
             target="_blank"
             rel="noopener noreferrer"
             className="footer-github-link"

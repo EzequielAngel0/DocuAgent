@@ -26,7 +26,6 @@ export default function Navbar() {
   const navLinks = [
     { name: "Inicio", href: "/" },
     { name: "Chat de IA", href: "/chat" },
-    { name: "Administración", href: "/admin" },
   ];
 
   return (
@@ -34,7 +33,7 @@ export default function Navbar() {
       <div className="navbar-container">
         {/* LOGO */}
         <Link href="/" className="navbar-logo">
-          <Bot className="navbar-logo-icon" />
+          <img src="/logo.svg" alt="DocuAgent Logo" width="28" height="28" className="navbar-logo-img" />
           <span className="navbar-logo-text">
             Docu<span>Agent</span>
           </span>

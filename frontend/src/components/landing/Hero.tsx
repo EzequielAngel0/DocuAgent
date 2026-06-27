@@ -24,11 +24,6 @@ export default function Hero() {
               <MessageSquare size={18} style={{ marginRight: "8px" }} />
               Iniciar Consulta RAG
             </Link>
-            
-            <Link href="/admin" className="btn btn-secondary hero-btn-admin">
-              Panel de Control
-              <ArrowRight size={16} style={{ marginLeft: "8px" }} />
-            </Link>
           </div>
         </div>
         

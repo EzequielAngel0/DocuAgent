@@ -13,7 +13,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DocuAgent — Agente RAG de Documentación Empresarial",
+  title: "DocuAgent",
   description: "Agente inteligente de búsqueda y consulta sobre documentación corporativa.",
 };
 
