@@ -19,5 +19,5 @@ COPY . .
 # Exponer el puerto del API
 EXPOSE 8000
 
-# Lanzar el servidor Uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Lanzar migraciones de base de datos relacional y luego el servidor Uvicorn
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

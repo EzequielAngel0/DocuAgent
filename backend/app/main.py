@@ -2,36 +2,14 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from alembic.config import Config
-from alembic import command
-
 from app.core.config import settings
 from app.api.endpoints import auth, admin, chat
 from app.services.rag_pipeline import create_collection_if_not_exists
 
-def run_migrations():
-    """Ejecuta las migraciones de Alembic programáticamente al iniciar la aplicación.
-    """
-    try:
-        # Asegurarse de estar en el directorio correcto para encontrar alembic.ini
-        ini_path = os.path.join(os.getcwd(), "alembic.ini")
-        if os.path.exists(ini_path):
-            alembic_cfg = Config(ini_path)
-            command.upgrade(alembic_cfg, "head")
-            print("Migraciones de base de datos relacional (Alembic) aplicadas con éxito.")
-        else:
-            print(f"No se encontró el archivo alembic.ini en la ruta: {ini_path}")
-    except Exception as e:
-        print(f"Error al ejecutar migraciones de base de datos relacional: {e}")
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. Ejecutar migraciones de base de datos PostgreSQL
-    run_migrations()
-    
-    # 2. Inicializar la colección vectorial en Qdrant
+    # Inicializar la colección vectorial en Qdrant
     create_collection_if_not_exists()
-    
     yield
 
 app = FastAPI(
