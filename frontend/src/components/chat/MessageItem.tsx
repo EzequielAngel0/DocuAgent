@@ -9,6 +9,7 @@ export interface Message {
   sender: "user" | "assistant";
   text: string;
   citations?: Citation[];
+  logId?: number;
 }
 
 interface MessageItemProps {
@@ -63,11 +64,23 @@ export default function MessageItem({ message }: MessageItemProps) {
     return formattedLines.join("");
   };
 
-  const handleFeedback = (type: "positive" | "negative") => {
-    if (feedback === type) {
-      setFeedback(null); // Deseleccionar
-    } else {
-      setFeedback(type); // Seleccionar
+  const handleFeedback = async (type: "positive" | "negative") => {
+    const nextFeedback = feedback === type ? "none" : type;
+    setFeedback(feedback === type ? null : type);
+
+    if (message.logId) {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+        await fetch(`${baseUrl}/admin/history/${message.logId}/feedback`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ feedback: nextFeedback }),
+        });
+      } catch (err) {
+        console.error("Error al guardar feedback en backend:", err);
+      }
     }
   };
 
