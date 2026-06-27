@@ -138,8 +138,8 @@ oci os bucket create \
 - [ ] OCIR configurado, imágenes pusheadas
 - [ ] `.env` configurado con secretos reales
 - [ ] `./ops/docuagent.sh up` funciona
-- [ ] Health check pasa: `curl https://api-agent.tu-dominio.dev/api/v1/health`
-- [ ] Frontend accesible: `https://agent.tu-dominio.dev`
+- [ ] Health check pasa: `curl https://api-docuagent.angelezequiel.dev/api/v1/health`
+- [ ] Frontend accesible: `https://docuagent.angelezequiel.dev`
 - [ ] DNS configurado en Cloudflare
 - [ ] OCI Vault con secretos
 - [ ] Object Storage bucket creado

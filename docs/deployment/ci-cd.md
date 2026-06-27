@@ -172,7 +172,7 @@ jobs:
       - name: Health check
         run: |
           sleep 10
-          curl -f https://api-agent.tu-dominio.dev/api/v1/health || exit 1
+          curl -f https://api-docuagent.angelezequiel.dev/api/v1/health || exit 1
 ```
 
 ---

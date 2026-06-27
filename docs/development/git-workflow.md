@@ -39,7 +39,7 @@ gitgraph
 
 | Branch | Propósito | Deploy | Protección |
 |--------|-----------|--------|------------|
-| `main` | **Producción** — Código estable desplegado en OCI | Automático → `tu-dominio.dev` | Requiere PR aprobado desde `develop` |
+| `main` | **Producción** — Código estable desplegado en OCI | Automático → `docuagent.angelezequiel.dev` | Requiere PR aprobado desde `develop` |
 | `develop` | **Staging / Local** — Integración y pruebas con Cloudflare Tunnel | Local con tunnel → `dev.tu-dominio.dev` | Requiere PR desde feature branches |
 
 ## Feature Branches
@@ -121,7 +121,7 @@ podman-compose -f podman-compose.yml -f podman-compose.dev.yml up -d
 # El merge a main dispara:
 # 1. GitHub Actions: build, test, push a OCIR
 # 2. Deploy automático a OCI
-# 3. Disponible en https://tu-dominio.dev
+# 3. Disponible en https://docuagent.angelezequiel.dev
 ```
 
 ## Convención de Commits
@@ -195,7 +195,7 @@ flowchart LR
     LOCAL -->|✅ Probado| PR[PR → main]
     PR -->|Tests + Review| MAIN[main]
     MAIN -->|GitHub Actions| OCI[Deploy OCI]
-    OCI -->|HTTPS| PROD[tu-dominio.dev]
+    OCI -->|HTTPS| PROD[docuagent.angelezequiel.dev]
 
     style FB fill:#9b59b6,color:#fff
     style DEV fill:#f39c12,color:#fff

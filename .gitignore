@@ -105,3 +105,4 @@ ehthumbs.db
 *.tar
 
 CLAUDE.md
+.agents/

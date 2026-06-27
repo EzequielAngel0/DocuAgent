@@ -99,8 +99,8 @@ case "$ACTION" in
     compose ps
     echo ""
     echo "Listo. El stack esta corriendo."
-    echo "  Frontend: https://agent.tu-dominio.dev"
-    echo "  API:      https://api-agent.tu-dominio.dev"
+    echo "  Frontend: https://docuagent.angelezequiel.dev"
+    echo "  API:      https://api-docuagent.angelezequiel.dev"
     ;;
 
   down)

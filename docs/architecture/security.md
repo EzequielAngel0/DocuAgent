@@ -283,8 +283,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 from fastapi.middleware.cors import CORSMiddleware
 
 ALLOWED_ORIGINS = [
-    "https://tu-dominio.dev",
-    "https://agent.tu-dominio.dev",
+    "https://angelezequiel.dev",
+    "https://docuagent.angelezequiel.dev",
 ]
 
 # Solo en desarrollo

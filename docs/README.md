@@ -12,6 +12,7 @@ docs/
 │   ├── overview.md                    # Visión general, objetivos, alcance
 │   ├── phases.md                      # Fases y cronograma (deadline: 20 jul)
 │   ├── decisions-log.md               # Registro de decisiones técnicas (ADR)
+│   ├── infrastructure-and-quality-plan.md # Plan de infraestructura, calidad y gobernanza
 │   └── glossary.md                    # Glosario de términos
 │
 ├── architecture/                      # 🏗️ Arquitectura del sistema
@@ -78,8 +79,9 @@ docs/
 ### Quiero entender la seguridad
 → [`architecture/security.md`](architecture/security.md) — prompt injection, API, BD, contenedores, red
 
-### Quiero ver las decisiones técnicas
-→ [`project/decisions-log.md`](project/decisions-log.md) — Por qué LangGraph, Qdrant, Cohere, etc.
+### Quiero ver las decisiones técnicas e infraestructura
+1. [`project/decisions-log.md`](project/decisions-log.md) → Por qué LangGraph, Qdrant, Cohere, etc.
+2. [`project/infrastructure-and-quality-plan.md`](project/infrastructure-and-quality-plan.md) → Detalles de OCI, límites de recursos, Nginx y plan RAG.
 
 ---
 
