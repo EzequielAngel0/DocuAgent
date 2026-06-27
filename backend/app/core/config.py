@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     # Entorno
     ENVIRONMENT: str = "development"
 
+    # API Config
+    API_HOST: str = "0.0.0.0"
+    API_PORT: int = 8000
+    API_PREFIX: str = "/api/v1"
+    NEXT_PUBLIC_APP_NAME: str = "DocuAgent"
+
     # PostgreSQL
     DB_USER: str = "docuagent_app"
     DB_PASSWORD: str = "a_i=a5*BD83p|WfP"
