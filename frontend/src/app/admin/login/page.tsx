@@ -100,8 +100,8 @@ export default function AdminLoginPage() {
         // Escribir la cookie de autenticación real en el cliente para el middleware
         document.cookie = "auth_token=mock_jwt_token_docuagent_staging; path=/; max-age=900; SameSite=Lax";
         
-        // Redirigir al dashboard
-        router.push("/admin");
+        // Redirigir al dashboard con recarga completa para asegurar envío de cookie
+        window.location.href = "/admin";
       }, 1000);
     } else {
       setError("Código TOTP inválido. Intenta de nuevo.");
