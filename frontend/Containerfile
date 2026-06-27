@@ -1,12 +1,29 @@
-# frontend/Containerfile
+# frontend/Containerfile — build multi-stage de Next.js, usuario no-root
+# ----------------------------------------------------------------------
+# Etapa 1: builder
+# ----------------------------------------------------------------------
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+
+# Las variables NEXT_PUBLIC_* se inlinean en tiempo de BUILD: deben llegar
+# como build-args (ver podman-compose.yml y el workflow deploy.yml).
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WS_URL
+ARG NEXT_PUBLIC_APP_NAME
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL \
+    NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME \
+    NEXT_TELEMETRY_DISABLED=1
+
 RUN npm run build
 
+# ----------------------------------------------------------------------
+# Etapa 2: runtime
+# ----------------------------------------------------------------------
 FROM node:20-alpine
 
 RUN addgroup -S docuagent && adduser -S docuagent -G docuagent
