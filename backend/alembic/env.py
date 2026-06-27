@@ -8,7 +8,7 @@ from alembic import context
 
 # Importar configuración y modelos para autogeneración
 from app.core.config import settings
-from app.db.models import Base
+from app.models.orm import Base
 
 # Este es el objeto de configuración de Alembic, que proporciona
 # acceso a los valores dentro del archivo .ini en uso.
