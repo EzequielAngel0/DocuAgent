@@ -310,29 +310,29 @@ export const config = { matcher: '/admin/:path*' };
 
 ```css
 /* globals.css */
+/* Sistema de Diseño: Minimalista Editorial Flat (Temas Claro y Oscuro) */
 :root {
-  /* Colores principales */
-  --color-primary: hsl(230, 80%, 60%);
-  --color-primary-hover: hsl(230, 80%, 55%);
-  --color-secondary: hsl(280, 70%, 55%);
-  --color-accent: hsl(170, 70%, 50%);
+  /* ==========================================
+     TEMA CLARO (Light Mode - por defecto)
+     ========================================== */
+  --bg-primary: #FAF8F5;       /* Crema suave/arena */
+  --bg-secondary: #F3EFEA;     /* Arena más oscuro para sidebar */
+  --bg-surface: #FFFFFF;       /* Blanco sólido para tarjetas/mensajes */
+  
+  --text-primary: #2C2621;     /* Carbón cálido oscuro */
+  --text-secondary: #5C524A;   /* Sepia/gris para subtítulos */
+  --text-muted: #8C7F74;       /* Tono apagado para metadatos */
 
-  /* Fondo y superficie */
-  --bg-primary: hsl(220, 20%, 8%);
-  --bg-secondary: hsl(220, 18%, 12%);
-  --bg-surface: hsl(220, 16%, 16%);
-  --bg-elevated: hsl(220, 14%, 20%);
+  /* Colores de acento */
+  --color-primary: #C85A32;    /* Terracota */
+  --color-primary-hover: #A04422;
+  --color-secondary: #8E8D30;  /* Verde oliva silenciado */
+  --color-accent: #D9A036;     /* Ámbar suave */
+  --color-bronze: #8C6A4B;     /* Bronce */
 
-  /* Texto */
-  --text-primary: hsl(220, 20%, 95%);
-  --text-secondary: hsl(220, 15%, 70%);
-  --text-muted: hsl(220, 10%, 50%);
-
-  /* Bordes y glassmorphism */
-  --border-subtle: hsla(220, 20%, 50%, 0.15);
-  --glass-bg: hsla(220, 20%, 15%, 0.6);
-  --glass-border: hsla(220, 20%, 50%, 0.1);
-  --glass-blur: 12px;
+  /* Bordes limpios (Sin glassmorphism) */
+  --border-subtle: #E8E2D9;    /* Borde fino */
+  --border-strong: #D5CBBF;
 
   /* Espaciado */
   --space-xs: 4px;
@@ -343,20 +343,48 @@ export const config = { matcher: '/admin/:path*' };
   --space-2xl: 48px;
 
   /* Border radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-full: 9999px;
 
-  /* Sombras */
-  --shadow-sm: 0 2px 4px hsla(0, 0%, 0%, 0.2);
-  --shadow-md: 0 4px 12px hsla(0, 0%, 0%, 0.3);
-  --shadow-lg: 0 8px 24px hsla(0, 0%, 0%, 0.4);
+  /* Sombras planas o muy difusas */
+  --shadow-sm: 0 1px 2px rgba(44, 38, 33, 0.05);
+  --shadow-md: 0 4px 8px rgba(44, 38, 33, 0.08);
+  --shadow-lg: 0 8px 16px rgba(44, 38, 33, 0.12);
 
   /* Transiciones */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow: 400ms ease;
+}
+
+[data-theme="dark"] {
+  /* ==========================================
+     TEMA OSCURO (Dark Mode)
+     ========================================== */
+  --bg-primary: #12100E;       /* Carbón cálido oscuro */
+  --bg-secondary: #1C1815;     /* Superficie de sidebar oscura */
+  --bg-surface: #24201C;       /* Tarjetas en carbón más claro */
+  
+  --text-primary: #F4EFEB;     /* Arena claro/crema */
+  --text-secondary: #C3B8AE;   /* Gris/sepia suave */
+  --text-muted: #8E8277;       /* Metadatos oscuros */
+
+  /* Colores de acento */
+  --color-primary: #E07348;    /* Terracota brillante */
+  --color-primary-hover: #C85A32;
+  --color-secondary: #A3A23C;  /* Verde oliva */
+  --color-accent: #E5B453;     /* Ámbar */
+
+  /* Bordes oscuros */
+  --border-subtle: #38312B;
+  --border-strong: #4F453C;
+
+  /* Sombras oscuras */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4);
 }
 ```
 
