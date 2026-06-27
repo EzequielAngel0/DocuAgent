@@ -26,9 +26,8 @@ router = APIRouter()
 async def verify_turnstile(token: str) -> bool:
     """Verifica el token de Turnstile llamando a la API de Cloudflare.
     """
-    # Si no hay llave secreta configurada o el token es de simulación, saltar verificación
-    if not settings.TURNSTILE_SECRET_KEY or token == "mock_turnstile" or not token:
-        return True
+    if not settings.TURNSTILE_SECRET_KEY or not token:
+        return False
         
     try:
         async with httpx.AsyncClient() as client:
@@ -116,12 +115,9 @@ async def verify_2fa(
             detail="Usuario no encontrado."
         )
         
-    # Verificar código TOTP. 
-    # Aceptamos '123456' como bypass de staging para simplificar pruebas del usuario
+    # Verificar código TOTP real con Google Authenticator
     is_valid_totp = False
-    if verify_data.code == "123456":
-        is_valid_totp = True
-    elif user.totp_secret:
+    if user.totp_secret:
         is_valid_totp = verify_totp_code(user.totp_secret, verify_data.code)
         
     if not is_valid_totp:

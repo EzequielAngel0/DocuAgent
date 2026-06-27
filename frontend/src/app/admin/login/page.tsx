@@ -21,47 +21,45 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const totpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // 1. Cargar script de Turnstile si la site key está presente
+  // 1. Cargar script de Turnstile siempre para la verificación real
   useEffect(() => {
-    const key = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-    if (key) {
-      setSiteKey(key);
-      (window as any).onloadTurnstileCallback = () => {
-        if ((window as any).turnstile) {
-          (window as any).turnstile.render("#turnstile-widget", {
-            sitekey: key,
-            theme: "dark",
-            callback: (token: string) => {
-              setTurnstileToken(token);
-              setTurnstileChecked(true);
-            },
-            "expired-callback": () => {
-              setTurnstileToken("");
-              setTurnstileChecked(false);
-            }
-          });
-        }
-      };
+    const key = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "0x4AAAAAADr0awWLSWtkmM4f";
+    setSiteKey(key);
+    (window as any).onloadTurnstileCallback = () => {
+      if ((window as any).turnstile) {
+        (window as any).turnstile.render("#turnstile-widget", {
+          sitekey: key,
+          theme: "dark",
+          callback: (token: string) => {
+            setTurnstileToken(token);
+            setTurnstileChecked(true);
+          },
+          "expired-callback": () => {
+            setTurnstileToken("");
+            setTurnstileChecked(false);
+          }
+        });
+      }
+    };
 
-      const script = document.createElement("script");
-      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback";
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback";
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
 
-      return () => {
-        if (document.head.contains(script)) {
-          document.head.removeChild(script);
-        }
-        delete (window as any).onloadTurnstileCallback;
-      };
-    }
+    return () => {
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
+      delete (window as any).onloadTurnstileCallback;
+    };
   }, []);
 
   // Limpiar error al escribir
   useEffect(() => {
     setError(null);
-  }, [email, password, turnstileChecked]);
+  }, [email, password, turnstileToken]);
 
   const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,13 +70,8 @@ export default function AdminLoginPage() {
       return;
     }
 
-    if (siteKey && !turnstileToken) {
-      setError("Por favor, completa el desafío anti-bot (Turnstile).");
-      return;
-    }
-
-    if (!siteKey && !turnstileChecked) {
-      setError("Por favor, completa el desafío de seguridad mock.");
+    if (!turnstileToken) {
+      setError("Por favor, completa la verificación anti-bot (Turnstile).");
       return;
     }
 
@@ -93,7 +86,7 @@ export default function AdminLoginPage() {
       body: JSON.stringify({
         email: email,
         password: password,
-        turnstile_token: turnstileToken || "mock_turnstile"
+        turnstile_token: turnstileToken
       })
     })
     .then(async (res) => {
@@ -251,35 +244,10 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
-              {/* CLOUDFLARE TURNSTILE WIDGET O FALLBACK MOCK */}
-              {siteKey ? (
-                <div style={{ display: "flex", justifyContent: "center", margin: "var(--space-md) 0" }}>
-                  <div id="turnstile-widget"></div>
-                </div>
-              ) : (
-                <div className="turnstile-mock-container">
-                  <div className="turnstile-mock-box flex items-center justify-between">
-                    <label className="turnstile-checkbox-label flex items-center">
-                      <input
-                        type="checkbox"
-                        className="turnstile-checkbox"
-                        checked={turnstileChecked}
-                        onChange={(e) => {
-                          setTurnstileChecked(e.target.checked);
-                          if (e.target.checked) setTurnstileToken("mock_turnstile");
-                          else setTurnstileToken("");
-                        }}
-                        disabled={loading || isLocked}
-                      />
-                      <span className="turnstile-checkbox-text">No soy un robot (Cloudflare Turnstile Mock)</span>
-                    </label>
-                    <div className="turnstile-brand">
-                      <ShieldCheck size={18} className="icon-olive" />
-                      <span>Verificado</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* CLOUDFLARE TURNSTILE WIDGET REAL */}
+              <div style={{ display: "flex", justifyContent: "center", margin: "var(--space-md) 0", minHeight: "65px" }}>
+                <div id="turnstile-widget"></div>
+              </div>
 
               <button
                 type="submit"
@@ -288,10 +256,6 @@ export default function AdminLoginPage() {
               >
                 {loading ? "Verificando..." : "Siguiente paso"}
               </button>
-
-              <div className="login-help-note">
-                <p><strong>Ayuda de prueba:</strong> Correo: <code>admin@empresa.com</code> | Clave: <code>admin</code></p>
-              </div>
             </form>
           ) : (
             /* PASO 2 */
@@ -339,10 +303,6 @@ export default function AdminLoginPage() {
               >
                 Volver
               </button>
-
-              <div className="login-help-note">
-                <p><strong>Ayuda de prueba 2FA:</strong> Código TOTP: <code>123456</code></p>
-              </div>
             </form>
           )}
         </div>

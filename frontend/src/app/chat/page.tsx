@@ -115,84 +115,18 @@ export default function ChatPage() {
     let accumulatedText = "";
     const botMsgId = "msg_bot_" + Date.now();
 
-    const runFallbackMock = () => {
-      setIsTyping(true);
-      setTimeout(() => {
-        const query = messageText.toLowerCase();
-        let responseText = "";
-        let responseCitations: any[] = [];
+    const handleConnectionError = () => {
+      setIsTyping(false);
+      const errorMsg: Message = {
+        id: "msg_err_" + Date.now(),
+        sender: "assistant",
+        text: "Lo siento, no se pudo conectar con el servidor de chat. Asegúrate de que el backend esté en ejecución o inténtalo más tarde.",
+        citations: []
+      };
 
-        // Simular lógica de enrutamiento RAG
-        if (query.includes("vacaciones") || query.includes("vacación")) {
-          responseText = "En la empresa, el periodo de vacaciones anuales remuneradas es de **15 días laborables** por año completo de servicios prestados. Estas pueden solicitarse a partir del primer aniversario en la organización.\n\nNormas clave:\n- Se deben programar y coordinar con tu supervisor directo con un mínimo de **15 días de anticipación**.\n- No son acumulables más allá de 2 periodos consecutivos.";
-          responseCitations = [
-            {
-              documentName: "politica_vacaciones.pdf",
-              page: "Pág. 2",
-              category: "Recursos Humanos",
-              excerpt: "El empleado tendrá derecho a disfrutar de quince (15) días hábiles de vacaciones remuneradas por cada año completo de servicio continuo."
-            },
-            {
-              documentName: "manual_onboarding.docx",
-              page: "Pág. 12",
-              category: "Recursos Humanos",
-              excerpt: "Las vacaciones anuales deben planificarse con anticipación y requieren la aprobación formal del jefe de departamento."
-            }
-          ];
-        } else if (query.includes("gasto") || query.includes("reembolso") || query.includes("viatico") || query.includes("viaje")) {
-          responseText = "La política de reembolso de gastos corporativos establece que todos los viáticos, comidas de negocios y gastos de transporte deben rendirse mediante la plataforma administrativa en un plazo máximo de **5 días hábiles** tras finalizar el viaje o realizarse el gasto.\n\nRequisitos indispensables:\n- Cargar factura electrónica válida (CFDI/XML) emitida a nombre de la empresa.\n- Gastos individuales superiores a $50 USD requieren pre-aprobación del director del departamento.";
-          responseCitations = [
-            {
-              documentName: "politica_gastos.pdf",
-              page: "Pág. 4",
-              category: "Finanzas",
-              excerpt: "Todo gasto reembolsable debe reportarse con comprobante fiscal vigente en un periodo no mayor a cinco (5) días hábiles posteriores a su realización."
-            }
-          ];
-        } else if (query.includes("seguridad") || query.includes("código") || query.includes("túnel") || query.includes("podman") || query.includes("token")) {
-          responseText = "DocuAgent implementa estrictos protocolos de seguridad y aislamiento:\n- **Aislamiento de red:** Las bases de datos (PostgreSQL y Qdrant) se ejecutan en una red interna privada de Podman, inaccesible desde Internet.\n- **Autenticación admin:** El inicio de sesión administrativo requiere correo, contraseña encriptada con bcrypt, validación anti-bot de Cloudflare Turnstile y un código TOTP de 2FA compatible con Google Authenticator.\n- **Secrets Management:** Las credenciales y claves API de producción se gestionan mediante **OCI Vault**.";
-          responseCitations = [
-            {
-              documentName: "security.md",
-              page: "Pág. 3",
-              category: "Seguridad",
-              excerpt: "La base de datos relacional y la base de datos vectorial Qdrant operan en redes virtuales aisladas y no exponen puertos públicos."
-            },
-            {
-              documentName: "infrastructure-and-quality-plan.md",
-              page: "Pág. 2",
-              category: "Infraestructura",
-              excerpt: "Toda clave API y clave de encriptación simétrica debe ser leída del almacén de secretos OCI Vault en producción."
-            }
-          ];
-        } else if (query.includes("formato") || query.includes("pdf") || query.includes("word") || query.includes("excel") || query.includes("csv")) {
-          responseText = "El pipeline de ingesta soporta una gran variedad de archivos organizacionales:\n- **Documentos:** PDF (nativo), Word (DOCX) y texto plano (TXT).\n- **Tablas:** Excel (XLSX) y CSV.\n- **Formatos estructurados/web:** Markdown (MD), HTML y JSON.\n\nLos archivos se limpian semánticamente y se dividen en fragmentos de entre 200 y 1500 caracteres antes de ser indexados.";
-          responseCitations = [
-            {
-              documentName: "execution-guide.md",
-              page: "Fase 7",
-              category: "Desarrollo",
-              excerpt: "Extractores: PDF, Word, Excel, PowerPoint, Markdown, CSV, JSON, HTML, TXT. Ingesta semántica batch."
-            }
-          ];
-        } else {
-          // Estado Fallback del RAG
-          responseText = "No se encontró información relevante sobre ese tema en los manuales ni políticas indexadas de la empresa. Por favor, asegúrate de preguntar sobre Recursos Humanos, Finanzas, Seguridad o formatos de archivos. Si consideras que esta información debería estar aquí, contacta al administrador de documentación.";
-          responseCitations = [];
-        }
-
-        const botMsg: Message = {
-          id: "msg_fallback_" + Date.now(),
-          sender: "assistant",
-          text: responseText,
-          citations: responseCitations
-        };
-
-        const finalMessages = [...updatedMessages, botMsg];
-        setMessages(finalMessages);
-        saveMessages(activeSessionId, finalMessages);
-        setIsTyping(false);
-      }, 1500);
+      const finalMessages = [...updatedMessages, errorMsg];
+      setMessages(finalMessages);
+      saveMessages(activeSessionId, finalMessages);
     };
 
     try {
@@ -203,7 +137,7 @@ export default function ChatPage() {
       const connectTimeout = setTimeout(() => {
         if (!wsConnected) {
           if (ws) ws.close();
-          runFallbackMock();
+          handleConnectionError();
         }
       }, 1500);
 
@@ -257,7 +191,7 @@ export default function ChatPage() {
           ws?.close();
           // Eliminar el mensaje vacío que se creó e ir a fallback
           setMessages((prev) => prev.filter((m) => m.id !== botMsgId));
-          runFallbackMock();
+          handleConnectionError();
         }
       };
 
@@ -265,13 +199,13 @@ export default function ChatPage() {
         console.error("WebSocket Error:", err);
         if (!wsConnected) {
           clearTimeout(connectTimeout);
-          runFallbackMock();
+          handleConnectionError();
         }
       };
 
     } catch (e) {
       console.error("Fallo al instanciar WebSocket:", e);
-      runFallbackMock();
+      handleConnectionError();
     }
   };
 
