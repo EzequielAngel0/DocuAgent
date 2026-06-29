@@ -1,6 +1,9 @@
-# backend/Containerfile — build multi-stage, usuario no-root
+# backend/Containerfile — build multi-stage (builder → test → runtime)
+# Targets:
+#   --target test    imagen con ruff/mypy/pytest para CI/verificación
+#   (por defecto)    imagen de runtime mínima, no-root
 # ----------------------------------------------------------------------
-# Etapa 1: builder — instala dependencias en un prefijo aislado
+# Etapa 1: builder — instala dependencias de runtime en un prefijo aislado
 # ----------------------------------------------------------------------
 FROM python:3.12-slim AS builder
 
@@ -14,9 +17,28 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # ----------------------------------------------------------------------
-# Etapa 2: runtime — imagen final mínima
+# Etapa 2: test — runtime + herramientas de dev (ruff, mypy, pytest)
+# Uso: podman build -f Containerfile --target test -t docuagent-backend-test .
 # ----------------------------------------------------------------------
-FROM python:3.12-slim
+FROM python:3.12-slim AS test
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /install /usr/local
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
+COPY . .
+
+CMD ["pytest"]
+
+# ----------------------------------------------------------------------
+# Etapa 3: runtime — imagen final mínima (target por defecto)
+# ----------------------------------------------------------------------
+FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
