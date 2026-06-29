@@ -40,9 +40,12 @@ export default function AdminLayout({
   };
 
   const handleLogout = () => {
-    // Borrar cookie de autenticación
+    // Limpia la cookie del lado cliente y notifica al backend (best-effort).
     document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    router.push("/");
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+    fetch(`${baseUrl}/auth/logout`, { method: "POST", credentials: "include" })
+      .catch(() => {})
+      .finally(() => router.push("/"));
   };
 
   const menuItems = [

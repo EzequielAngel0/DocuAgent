@@ -82,6 +82,7 @@ export default function AdminLoginPage() {
 
     fetch(`${baseUrl}/auth/login`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: email,
@@ -151,6 +152,7 @@ export default function AdminLoginPage() {
 
     fetch(`${baseUrl}/auth/verify-2fa`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: email,
@@ -162,6 +164,7 @@ export default function AdminLoginPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.access_token) {
+          // TODO(seguridad): migrar a cookie httponly fijada por el backend.
           document.cookie = `auth_token=${data.access_token}; path=/; max-age=604800; SameSite=Lax`;
         }
         window.location.href = "/admin";
