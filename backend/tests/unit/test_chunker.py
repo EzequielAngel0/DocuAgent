@@ -3,8 +3,7 @@ from app.ingestion.chunker import chunk_text
 
 def test_chunk_text_basic():
     sample_text = (
-        "Esta es la primera línea.\nEsta es la segunda línea.\n"
-        "Esta es la tercera línea."
+        "Esta es la primera línea.\nEsta es la segunda línea.\n" "Esta es la tercera línea."
     )
     chunks = chunk_text(sample_text, chunk_size=100, chunk_overlap=20)
 
@@ -16,8 +15,7 @@ def test_chunk_text_basic():
 
 def test_chunk_text_page_tracking():
     sample_text = (
-        "[Página 1]\nContenido de la página 1.\n\n"
-        "[Página 2]\nContenido de la página 2."
+        "[Página 1]\nContenido de la página 1.\n\n" "[Página 2]\nContenido de la página 2."
     )
     chunks = chunk_text(sample_text, chunk_size=500, chunk_overlap=50)
 
