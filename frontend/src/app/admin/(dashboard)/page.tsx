@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Files, FileText, HeartHandshake, HelpCircle, ThumbsDown, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api";
 
 interface Document {
   chunks_count: number;
@@ -24,26 +25,16 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("auth_token="))
-        ?.split("=")[1];
-
       try {
         // Cargar documentos
-        const docsRes = await fetch(`${baseUrl}/admin/documents`, {
-          headers: { "Authorization": `Bearer ${token || ""}` }
-        });
+        const docsRes = await apiFetch(`/admin/documents`);
         if (docsRes.ok) {
           const docsData = await docsRes.json();
           setDocuments(docsData);
         }
 
         // Cargar historial
-        const logsRes = await fetch(`${baseUrl}/admin/history`, {
-          headers: { "Authorization": `Bearer ${token || ""}` }
-        });
+        const logsRes = await apiFetch(`/admin/history`);
         if (logsRes.ok) {
           const logsData = await logsRes.json();
           setLogs(logsData);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Search, ThumbsUp, ThumbsDown, Filter, Calendar, X, Eye, HelpCircle } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 interface CitationData {
   id: string;
@@ -33,15 +34,8 @@ export default function AdminHistoryPage() {
   // 1. Cargar categorías dinámicas para los filtros
   useEffect(() => {
     const fetchCats = async () => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("auth_token="))
-        ?.split("=")[1];
       try {
-        const res = await fetch(`${baseUrl}/admin/categories`, {
-          headers: { "Authorization": `Bearer ${token || ""}` }
-        });
+        const res = await apiFetch(`/admin/categories`);
         if (res.ok) {
           const data = await res.json();
           setCategories(data.map((c: any) => c.name));
@@ -56,11 +50,6 @@ export default function AdminHistoryPage() {
   // 2. Cargar historial con filtros dinámicos del backend
   useEffect(() => {
     const fetchLogs = async () => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("auth_token="))
-        ?.split("=")[1];
 
       // Formatear query params
       const params = new URLSearchParams();
@@ -72,9 +61,7 @@ export default function AdminHistoryPage() {
       else if (filterFeedback === "Sin calificar") params.append("rating", "unrated");
 
       try {
-        const res = await fetch(`${baseUrl}/admin/history?${params.toString()}`, {
-          headers: { "Authorization": `Bearer ${token || ""}` }
-        });
+        const res = await apiFetch(`/admin/history?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
           setLogs(data);

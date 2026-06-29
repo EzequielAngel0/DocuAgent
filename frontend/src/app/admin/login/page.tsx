@@ -162,11 +162,9 @@ export default function AdminLoginPage() {
     .then(async (res) => {
       setLoading(false);
       if (res.ok) {
-        const data = await res.json();
-        if (data.access_token) {
-          // TODO(seguridad): migrar a cookie httponly fijada por el backend.
-          document.cookie = `auth_token=${data.access_token}; path=/; max-age=604800; SameSite=Lax`;
-        }
+        // El backend fija la cookie httponly de sesión (dominio compartido) en
+        // esta respuesta. El middleware de Next la lee del lado servidor; el JS
+        // nunca toca el token (mitiga robo por XSS).
         window.location.href = "/admin";
       } else {
         const errData = await res.json();

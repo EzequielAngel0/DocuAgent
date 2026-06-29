@@ -3,6 +3,7 @@
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Database, Layers, Eye } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 interface Chunk {
   index: number;
@@ -33,19 +34,7 @@ export default function ChunksPage({
     const fetchChunks = async () => {
       try {
         setLoading(true);
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-        
-        // Leer cookie auth_token
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("auth_token="))
-          ?.split("=")[1];
-
-        const res = await fetch(`${baseUrl}/admin/documents/${docId}/chunks`, {
-          headers: {
-            "Authorization": `Bearer ${token || ""}`,
-          },
-        });
+        const res = await apiFetch(`/admin/documents/${docId}/chunks`);
 
         if (!res.ok) {
           throw new Error("No se pudieron cargar los fragmentos vectoriales.");

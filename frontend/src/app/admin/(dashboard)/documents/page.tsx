@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Upload, Trash2, RotateCw, FileText, ChevronRight, CheckCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api";
 
 interface Document {
   id: string;
@@ -29,17 +30,9 @@ export default function AdminDocumentsPage() {
   // 1. Cargar datos iniciales del backend (documentos y categorías reales)
   useEffect(() => {
     const loadInitialData = async () => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("auth_token="))
-        ?.split("=")[1];
-
       try {
         // Cargar categorías
-        const catsRes = await fetch(`${baseUrl}/admin/categories`, {
-          headers: { "Authorization": `Bearer ${token || ""}` }
-        });
+        const catsRes = await apiFetch(`/admin/categories`);
         if (catsRes.ok) {
           const catsData = await catsRes.json();
           setCategories(catsData);
@@ -49,9 +42,7 @@ export default function AdminDocumentsPage() {
         }
 
         // Cargar documentos
-        const docsRes = await fetch(`${baseUrl}/admin/documents`, {
-          headers: { "Authorization": `Bearer ${token || ""}` }
-        });
+        const docsRes = await apiFetch(`/admin/documents`);
         if (docsRes.ok) {
           const docsData = await docsRes.json();
           setDocuments(docsData);
@@ -68,15 +59,8 @@ export default function AdminDocumentsPage() {
     const hasIndexingDocs = documents.some((d) => d.status === "Indexando");
     if (hasIndexingDocs) {
       const interval = setInterval(async () => {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("auth_token="))
-          ?.split("=")[1];
         try {
-          const res = await fetch(`${baseUrl}/admin/documents`, {
-            headers: { "Authorization": `Bearer ${token || ""}` }
-          });
+          const res = await apiFetch(`/admin/documents`);
           if (res.ok) {
             const data = await res.json();
             setDocuments(data);
@@ -100,23 +84,14 @@ export default function AdminDocumentsPage() {
     if (!uploadFile) return;
 
     setUploadProgress(10);
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("auth_token="))
-      ?.split("=")[1];
-
     try {
       const formData = new FormData();
       formData.append("file", uploadFile);
       formData.append("category_id", uploadCategoryId);
 
       setUploadProgress(40);
-      const res = await fetch(`${baseUrl}/admin/documents/upload`, {
+      const res = await apiFetch(`/admin/documents/upload`, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token || ""}`
-        },
         body: formData
       });
 
@@ -142,18 +117,9 @@ export default function AdminDocumentsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de que deseas eliminar este documento y todos sus vectores indexados en Qdrant?")) return;
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("auth_token="))
-      ?.split("=")[1];
-
     try {
-      const res = await fetch(`${baseUrl}/admin/documents/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token || ""}`
-        }
+      const res = await apiFetch(`/admin/documents/${id}`, {
+        method: "DELETE"
       });
       if (res.ok) {
         setDocuments((prev) => prev.filter((doc) => doc.id !== id));
@@ -167,23 +133,14 @@ export default function AdminDocumentsPage() {
 
   const handleReindex = async (id: string) => {
     setReindexingId(id);
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("auth_token="))
-      ?.split("=")[1];
-
     try {
       // Actualización optimista de interfaz
       setDocuments((prev) =>
         prev.map((d) => (d.id === id ? { ...d, status: "Indexando" as const } : d))
       );
 
-      const res = await fetch(`${baseUrl}/admin/documents/${id}/reindex`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token || ""}`
-        }
+      const res = await apiFetch(`/admin/documents/${id}/reindex`, {
+        method: "POST"
       });
 
       if (!res.ok) {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { FolderPlus, Trash2, Edit2, Folder, Users, Shield, CircleDollarSign, Plus, X } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 interface Category {
   id: string;
@@ -24,24 +25,14 @@ export default function AdminCategoriesPage() {
 
   // Cargar categorías y documentos para calcular conteos
   const loadCategories = async () => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("auth_token="))
-      ?.split("=")[1];
-
     try {
       // 1. Cargar categorías
-      const catsRes = await fetch(`${baseUrl}/admin/categories`, {
-        headers: { "Authorization": `Bearer ${token || ""}` }
-      });
+      const catsRes = await apiFetch(`/admin/categories`);
       if (!catsRes.ok) throw new Error("Error al obtener categorías.");
       const cats = await catsRes.json();
 
       // 2. Cargar documentos para calcular docsCount
-      const docsRes = await fetch(`${baseUrl}/admin/documents`, {
-        headers: { "Authorization": `Bearer ${token || ""}` }
-      });
+      const docsRes = await apiFetch(`/admin/documents`);
       let docs: any[] = [];
       if (docsRes.ok) {
         docs = await docsRes.json();
@@ -82,18 +73,9 @@ export default function AdminCategoriesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de que deseas eliminar esta categoría? Se borrarán sus documentos asociados.")) return;
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("auth_token="))
-      ?.split("=")[1];
-
     try {
-      const res = await fetch(`${baseUrl}/admin/categories/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token || ""}`
-        }
+      const res = await apiFetch(`/admin/categories/${id}`, {
+        method: "DELETE"
       });
       if (res.ok) {
         setCategories((prev) => prev.filter((c) => c.id !== id));
@@ -116,20 +98,13 @@ export default function AdminCategoriesPage() {
       .replace(/[\s_-]+/g, "-")
       .replace(/^-+|-+$/g, "");
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("auth_token="))
-      ?.split("=")[1];
-
     try {
       if (editingCategory) {
         // Editar categoría
-        const res = await fetch(`${baseUrl}/admin/categories/${editingCategory.id}`, {
+        const res = await apiFetch(`/admin/categories/${editingCategory.id}`, {
           method: "PUT",
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token || ""}`
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
             name: formName,
@@ -147,11 +122,10 @@ export default function AdminCategoriesPage() {
         }
       } else {
         // Crear categoría
-        const res = await fetch(`${baseUrl}/admin/categories`, {
+        const res = await apiFetch(`/admin/categories`, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token || ""}`
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
             name: formName,

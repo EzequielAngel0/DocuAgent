@@ -115,15 +115,13 @@ async def verify_2fa(
         expires_delta=timedelta(days=settings.JWT_REFRESH_EXPIRE_DAYS),
     )
 
-    # NOTA SEGURIDAD: hoy `httponly=False` porque el frontend lee la cookie con
-    # `document.cookie` para enviarla en Authorization. El backend YA acepta la
-    # cookie (get_current_user) y la fija con dominio compartido, así que migrar
-    # a `httponly=True` solo requiere refactorizar el frontend a
-    # `credentials: "include"` (P0 en security-audit.md). Mientras tanto:
+    # Cookie de sesión httponly (no legible por JS → mitiga robo por XSS). La
+    # leen el backend (get_current_user) y el middleware de Next del lado
+    # servidor. El frontend habla con la API vía `credentials: "include"`.
     response.set_cookie(
         key="auth_token",
         value=access_token,
-        httponly=False,
+        httponly=True,
         secure=settings.ENVIRONMENT != "development",
         max_age=3600 * 24 * settings.JWT_REFRESH_EXPIRE_DAYS,
         samesite="lax",
