@@ -94,3 +94,28 @@ jobs:
           NEXT_PUBLIC_WS_URL: wss://api-docuagent.angelezequiel.dev/api/v1/chat/ws
           NEXT_PUBLIC_APP_NAME: DocuAgent
         run: npm run build
+
+  security:
+    name: Seguridad · deps + filesystem
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Informativo por ahora (no bloquea): revisar y luego endurecer a exit-code 1.
+      - name: pip-audit (dependencias backend)
+        run: |
+          pip install pip-audit==2.7.3
+          pip-audit -r backend/requirements.txt || true
+
+      - name: Trivy (vulnerabilidades del repositorio)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"

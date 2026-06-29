@@ -17,6 +17,10 @@ services:
     networks:
       - frontend
       - internal
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     restart: unless-stopped
 
   frontend:
@@ -36,6 +40,10 @@ services:
       - backend
     networks:
       - frontend
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     restart: unless-stopped
 
   postgres:
@@ -56,6 +64,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
 
   qdrant:
@@ -69,6 +79,8 @@ services:
       - "6333:6333"
     networks:
       - internal
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
 
 volumes:
