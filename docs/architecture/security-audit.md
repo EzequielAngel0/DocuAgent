@@ -27,6 +27,23 @@ riesgos residuales más relevantes son: el **token JWT en cookie legible por JS*
 | Host header | sin restricción | ✅ TrustedHostMiddleware con `ALLOWED_HOSTS` | `main.py` |
 | Fugas en errores | `str(exc)` al cliente | ✅ mensaje genérico; detalle solo en logs | `chat.py`, `documents.py` |
 
+## Segunda ronda de endurecimiento
+
+| Control | Estado | Dónde |
+|---|---|---|
+| Rate limit del WebSocket de chat (por IP, ventana deslizante) | ✅ | `core/ws_ratelimit.py`, `chat.py` |
+| Anti zip-bomb en docx/xlsx (tamaño/ratio) | ✅ | `core/validation.py`, `documents.py` |
+| Backend acepta sesión por **cookie** (además del header) | ✅ | `api/deps.py` |
+| Cookie con dominio compartido entre subdominios | ✅ | `auth.py`, `COOKIE_DOMAIN` |
+| Contenedores: `no-new-privileges` + `cap_drop: ALL` (app) | ✅ | `podman-compose.yml` |
+| CI: `pip-audit` + Trivy (informativo) | ✅ | `.github/workflows/ci.yml` |
+
+> **httponly**: el backend ya lee la cookie (`get_current_user`) y la fija con
+> dominio compartido, de modo que activar `httponly=True` solo requiere
+> refactorizar el frontend a `credentials: "include"` (deja de leer
+> `document.cookie`). Se dejó `httponly=False` para no romper el panel actual
+> hasta hacer ese refactor con prueba en navegador.
+
 ## Análisis por área
 
 ### 1. Inyección de prompts (LLM) — 🟧
@@ -107,9 +124,10 @@ riesgos residuales más relevantes son: el **token JWT en cookie legible por JS*
 ## Recomendaciones priorizadas
 
 **P0 (antes de exponer a usuarios reales)**
-1. Cookie de sesión `httponly` + `Secure` (mitiga robo de token por XSS).
+1. Cookie de sesión `httponly` (mitiga robo de token por XSS). **Backend listo**
+   (lee cookie + dominio); falta el refactor del frontend a `credentials:include`.
 2. Rotar todas las llaves de staging; usar OCI Vault en prod; no reutilizar.
-3. Rate limit en el WebSocket de chat (abuso/costo).
+3. ~~Rate limit en el WebSocket de chat~~ — **hecho** (`ws_ratelimit.py`).
 
 **P1 (corto plazo)**
 4. Refresh token con rotación + revocación (`jti`); bloqueo tras N 2FA fallidos.
