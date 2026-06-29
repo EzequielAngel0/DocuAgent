@@ -104,5 +104,4 @@ ehthumbs.db
 # No subir imagenes construidas localmente
 *.tar
 
-CLAUDE.md
 .agents/

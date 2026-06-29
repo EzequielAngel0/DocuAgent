@@ -22,7 +22,8 @@ docs/
 │   ├── database-design.md             # BD (PostgreSQL + Qdrant)
 │   ├── llm-providers.md               # Multi-proveedor LLM
 │   ├── tech-stack.md                  # Stack tecnológico
-│   └── security.md                    # Seguridad (prompt injection, API, BD, red)
+│   ├── security.md                    # Seguridad (diseño: prompt injection, API, BD, red)
+│   └── security-audit.md              # Análisis de seguridad: hallazgos + recomendaciones
 │
 ├── pipeline/                          # 🔄 Pipeline RAG
 │   ├── 01-document-collection.md      # Fase 1: Colecta y organización
@@ -81,7 +82,8 @@ docs/
 6. CI/CD: [`deployment/ci-cd.md`](deployment/ci-cd.md)
 
 ### Quiero entender la seguridad
-→ [`architecture/security.md`](architecture/security.md) — prompt injection, API, BD, contenedores, red
+1. [`architecture/security.md`](architecture/security.md) — diseño: prompt injection, API, BD, contenedores, red
+2. [`architecture/security-audit.md`](architecture/security-audit.md) — hallazgos, severidad, estado y recomendaciones priorizadas
 
 ### Quiero ver las decisiones técnicas e infraestructura
 1. [`project/decisions-log.md`](project/decisions-log.md) → Por qué LangGraph, Qdrant, Cohere, etc.
