@@ -54,6 +54,7 @@ cloudflared/
 !next.config.ts
 !pyproject.toml
 !alembic.ini
+!.markdownlint.json
 
 # OCI credentials
 oci-config/
@@ -80,8 +81,8 @@ logs/
 # IDE y sistema operativo
 # ============================================================
 
-# VSCode
-.vscode/
+# VSCode (ignora todo el contenido salvo los 2 archivos compartidos del equipo)
+.vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
 
