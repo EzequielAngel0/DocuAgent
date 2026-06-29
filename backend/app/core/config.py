@@ -4,9 +4,8 @@ Carga variables de entorno desde `.env` y expone un objeto `settings`
 inmutable usado en todo el backend. Mantener este módulo libre de
 dependencias pesadas: lo importan Alembic, scripts y la app.
 """
-from typing import List, Optional
 
-from pydantic import Field, computed_field
+from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -41,7 +40,7 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
-    def cors_origins(self) -> List[str]:
+    def cors_origins(self) -> list[str]:
         raw = [o.strip() for o in self.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
         if raw:
             return raw
@@ -104,8 +103,8 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
-    def fallback_chain(self) -> List[str]:
-        seen: List[str] = []
+    def fallback_chain(self) -> list[str]:
+        seen: list[str] = []
         # El proveedor activo va primero, luego la cadena (sin duplicados).
         for name in [self.LLM_PROVIDER, *self.LLM_FALLBACK_CHAIN.split(",")]:
             name = name.strip().lower()
@@ -114,11 +113,11 @@ class Settings(BaseSettings):
         return seen
 
     # Claves y modelos por proveedor (modelos usados como fallback).
-    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str = "gpt-4o-mini"
-    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: str | None = None
     GEMINI_MODEL: str = "gemini-1.5-flash"
-    ANTHROPIC_API_KEY: Optional[str] = None
+    ANTHROPIC_API_KEY: str | None = None
     ANTHROPIC_MODEL: str = "claude-haiku-4-5-20251001"
     OLLAMA_BASE_URL: str = "http://ollama:11434"
     OLLAMA_MODEL: str = "llama3.1:8b"
@@ -127,7 +126,7 @@ class Settings(BaseSettings):
     # LangSmith (observabilidad de cadenas)
     # ------------------------------------------------------------------
     LANGCHAIN_TRACING_V2: bool = False
-    LANGCHAIN_API_KEY: Optional[str] = None
+    LANGCHAIN_API_KEY: str | None = None
     LANGCHAIN_PROJECT: str = "docuagent-staging"
 
     # ------------------------------------------------------------------
@@ -143,6 +142,15 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = "change_me_64_chars_secret_for_local_development_only_xxxxxxxx"
     JWT_ACCESS_EXPIRE_MINUTES: int = 15
     JWT_REFRESH_EXPIRE_DAYS: int = 7
+    JWT_ISSUER: str = "docuagent"
+    JWT_AUDIENCE: str = "docuagent-admin"
+
+    # Rate limiting (slowapi) en endpoints sensibles
+    RATE_LIMIT_LOGIN: str = "5/15minute"
+    RATE_LIMIT_2FA: str = "10/15minute"
+
+    # Hosts permitidos (TrustedHostMiddleware en prod; vacío = sin restricción)
+    ALLOWED_HOSTS: str = ""
 
     # ------------------------------------------------------------------
     # Cloudflare Turnstile (anti-bot)
@@ -169,6 +177,30 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     UPLOAD_DIR: str = "./uploads"
     MAX_FILE_SIZE_MB: int = 50
+
+    @computed_field
+    @property
+    def allowed_hosts(self) -> list[str]:
+        return [h.strip() for h in self.ALLOWED_HOSTS.split(",") if h.strip()]
+
+    @model_validator(mode="after")
+    def _validate_production_secrets(self):
+        """Falla rápido si producción arranca con secretos inseguros/incompletos."""
+        if self.ENVIRONMENT == "production":
+            insecure: list[str] = []
+            if "change_me" in self.JWT_SECRET_KEY or len(self.JWT_SECRET_KEY) < 32:
+                insecure.append("JWT_SECRET_KEY")
+            if self.ADMIN_PASSWORD in ("", "admin", "change_me_admin"):
+                insecure.append("ADMIN_PASSWORD")
+            if not self.COHERE_API_KEY:
+                insecure.append("COHERE_API_KEY")
+            if not self.CORS_ALLOWED_ORIGINS:
+                insecure.append("CORS_ALLOWED_ORIGINS")
+            if insecure:
+                raise ValueError(
+                    "Configuración insegura/incompleta en producción: " + ", ".join(insecure)
+                )
+        return self
 
 
 settings = Settings()

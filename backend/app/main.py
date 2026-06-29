@@ -1,13 +1,19 @@
 """Punto de entrada de la API DocuAgent (FastAPI)."""
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app import __version__
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
+from app.core.middleware import SecurityHeadersMiddleware
+from app.core.ratelimit import limiter
 from app.db.session import SessionLocal
 from app.rag.vector_store import vector_store
 
@@ -41,6 +47,17 @@ app = FastAPI(
     redoc_url=f"{settings.API_PREFIX}/redoc",
     lifespan=lifespan,
 )
+
+# Rate limiting (slowapi): registrar limiter y handler de 429.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Cabeceras de seguridad en todas las respuestas.
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Restringir el Host header en entornos con ALLOWED_HOSTS configurado.
+if settings.allowed_hosts:
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 
 # CORS restringido a los orígenes configurados (ver CORS_ALLOWED_ORIGINS).
 app.add_middleware(

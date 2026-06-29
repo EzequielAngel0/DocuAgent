@@ -6,9 +6,10 @@ Protocolo de mensajes (servidor → cliente):
   {"type": "done",    "log_id": int, "citations": [...]}
   {"type": "error",   "error": "..."}
 """
+
 import asyncio
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -27,8 +28,8 @@ async def _save_log(
     query: str,
     response: str,
     confidence: float,
-    category: Optional[str],
-    citations: List[Dict[str, Any]],
+    category: str | None,
+    citations: list[dict[str, Any]],
 ) -> int:
     async with SessionLocal() as db:
         log = AuditLog(
@@ -65,9 +66,7 @@ async def chat_websocket(websocket: WebSocket):
                 response_text = state.get("response") or FALLBACK_MESSAGE
                 await websocket.send_json({"type": "token", "token": response_text})
                 log_id = await _save_log(query, response_text, 0.0, category, [])
-                await websocket.send_json(
-                    {"type": "done", "log_id": log_id, "citations": []}
-                )
+                await websocket.send_json({"type": "done", "log_id": log_id, "citations": []})
                 continue
 
             # Generación con streaming (cadena de fallback de proveedores).
@@ -81,15 +80,19 @@ async def chat_websocket(websocket: WebSocket):
             log_id = await _save_log(
                 query, accumulated, state.get("confidence", 0.0), category, sources
             )
-            await websocket.send_json(
-                {"type": "done", "log_id": log_id, "citations": sources}
-            )
+            await websocket.send_json({"type": "done", "log_id": log_id, "citations": sources})
 
     except WebSocketDisconnect:
         logger.info("chat_ws_disconnected")
     except Exception as exc:  # noqa: BLE001
+        # Se registra el detalle pero al cliente solo se le da un mensaje genérico.
         logger.error("chat_ws_error", error=str(exc))
         try:
-            await websocket.send_json({"type": "error", "error": str(exc)})
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "error": "Ocurrió un error procesando tu consulta. Inténtalo de nuevo.",
+                }
+            )
         except Exception:  # noqa: BLE001
             pass

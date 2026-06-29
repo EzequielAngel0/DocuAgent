@@ -1,16 +1,18 @@
 """Autenticación del panel admin: password → Turnstile → TOTP 2FA → JWT."""
+
 import base64
 import io
 from datetime import timedelta
 
 import httpx
 import qrcode
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.api.deps import get_current_user
 from app.core.config import settings
+from app.core.ratelimit import limiter
 from app.core.security import (
     create_access_token,
     generate_totp_secret,
@@ -43,9 +45,7 @@ async def verify_turnstile(token: str) -> bool:
 
 async def ensure_default_admin(db: AsyncSession) -> None:
     """Crea o sincroniza el administrador semilla definido en configuración."""
-    result = await db.execute(
-        select(AdminUser).where(AdminUser.email == settings.ADMIN_EMAIL)
-    )
+    result = await db.execute(select(AdminUser).where(AdminUser.email == settings.ADMIN_EMAIL))
     admin = result.scalars().first()
     if not admin:
         admin = AdminUser(
@@ -63,7 +63,8 @@ async def ensure_default_admin(db: AsyncSession) -> None:
 
 
 @router.post("/login")
-async def login(login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit(settings.RATE_LIMIT_LOGIN)
+async def login(request: Request, login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
     await ensure_default_admin(db)
 
     # 1. Anti-bot (Turnstile) — obligatorio en producción.
@@ -75,9 +76,7 @@ async def login(login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
             )
 
     # 2. Credenciales.
-    result = await db.execute(
-        select(AdminUser).where(AdminUser.email == login_data.email)
-    )
+    result = await db.execute(select(AdminUser).where(AdminUser.email == login_data.email))
     user = result.scalars().first()
     if not user or not verify_password(login_data.password, user.password_hash):
         raise HTTPException(
@@ -93,19 +92,17 @@ async def login(login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/verify-2fa")
+@limiter.limit(settings.RATE_LIMIT_2FA)
 async def verify_2fa(
+    request: Request,
     verify_data: Verify2FARequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(AdminUser).where(AdminUser.email == verify_data.email)
-    )
+    result = await db.execute(select(AdminUser).where(AdminUser.email == verify_data.email))
     user = result.scalars().first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
 
     if not (user.totp_secret and verify_totp_code(user.totp_secret, verify_data.code)):
         raise HTTPException(

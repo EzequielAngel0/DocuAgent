@@ -3,9 +3,9 @@
 La subida valida extensión y tamaño, persiste el archivo y dispara la
 indexación vectorial en una tarea de fondo para no bloquear la respuesta.
 """
+
 import os
 import uuid
-from typing import List
 
 from fastapi import (
     APIRouter,
@@ -23,6 +23,7 @@ from sqlalchemy.future import select
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.core.validation import validate_file_signature
 from app.db.session import SessionLocal, get_db
 from app.ingestion import delete_document_vectors, index_document
 from app.models import AdminUser, Category, ChunkInspectorResponse, Document, DocumentResponse
@@ -35,7 +36,15 @@ UPLOAD_DIR = os.path.abspath(settings.UPLOAD_DIR)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {
-    ".pdf", ".docx", ".xlsx", ".xls", ".csv", ".md", ".txt", ".html", ".json",
+    ".pdf",
+    ".docx",
+    ".xlsx",
+    ".xls",
+    ".csv",
+    ".md",
+    ".txt",
+    ".html",
+    ".json",
 }
 
 
@@ -45,9 +54,7 @@ async def process_document_task(
     """Tarea de fondo: indexa el documento y actualiza su estado en BD."""
     async with SessionLocal() as db:
         try:
-            chunks_count = index_document(
-                document_id, document_name, file_path, category_name
-            )
+            chunks_count = index_document(document_id, document_name, file_path, category_name)
             await db.execute(
                 update(Document)
                 .where(Document.id == document_id)
@@ -78,7 +85,7 @@ async def _save_upload(file: UploadFile, dest_path: str, max_bytes: int) -> None
             buffer.write(chunk)
 
 
-@router.get("/documents", response_model=List[DocumentResponse])
+@router.get("/documents", response_model=list[DocumentResponse])
 async def list_documents(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Document).order_by(Document.uploaded_at.desc()))
     return result.scalars().all()
@@ -94,7 +101,9 @@ async def upload_document(
 ):
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=415, detail=f"Formato no soportado: {ext or 'desconocido'}.")
+        raise HTTPException(
+            status_code=415, detail=f"Formato no soportado: {ext or 'desconocido'}."
+        )
 
     cat_result = await db.execute(select(Category).where(Category.id == category_id))
     category = cat_result.scalars().first()
@@ -104,6 +113,13 @@ async def upload_document(
     doc_id = f"doc_{uuid.uuid4().hex[:8]}"
     saved_path = os.path.join(UPLOAD_DIR, f"{doc_id}{ext}")
     await _save_upload(file, saved_path, settings.MAX_FILE_SIZE_MB * 1024 * 1024)
+
+    # Verificar magic bytes: el contenido debe coincidir con la extensión.
+    if not validate_file_signature(saved_path, ext):
+        os.remove(saved_path)
+        raise HTTPException(
+            status_code=415, detail="El contenido del archivo no coincide con su extensión."
+        )
 
     new_doc = Document(
         id=doc_id,
@@ -143,9 +159,7 @@ async def reindex_document(
     await db.commit()
 
     delete_document_vectors(id)
-    background_tasks.add_task(
-        process_document_task, id, doc.name, doc.file_path, category_name
-    )
+    background_tasks.add_task(process_document_task, id, doc.name, doc.file_path, category_name)
     return doc
 
 
@@ -172,7 +186,7 @@ async def delete_document(
     return {"detail": "Documento eliminado con éxito."}
 
 
-@router.get("/documents/{id}/chunks", response_model=List[ChunkInspectorResponse])
+@router.get("/documents/{id}/chunks", response_model=list[ChunkInspectorResponse])
 async def inspect_document_chunks(
     id: str,
     db: AsyncSession = Depends(get_db),
@@ -187,9 +201,8 @@ async def inspect_document_chunks(
     try:
         points = vector_store.scroll_by_document(id, limit=100, with_vectors=True)
     except Exception as exc:  # noqa: BLE001
-        raise HTTPException(
-            status_code=500, detail=f"Error al leer la base vectorial: {exc}"
-        ) from exc
+        logger.error("qdrant_scroll_failed", document_id=id, error=str(exc))
+        raise HTTPException(status_code=500, detail="Error al leer la base vectorial.") from exc
 
     chunks = [
         {
