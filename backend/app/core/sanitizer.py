@@ -4,12 +4,12 @@ Primera línea de defensa del pipeline RAG. No sustituye al *system prompt*
 blindado ni al validador post-generación: es una capa más (defensa en
 profundidad). Trabaja sobre la consulta cruda antes de embeber/recuperar.
 """
+
 import re
-from typing import List
 
 # Patrones heurísticos de inyección frecuentes (ES/EN/PT). Conservadores
 # para minimizar falsos positivos en preguntas legítimas.
-_INJECTION_PATTERNS: List[re.Pattern] = [
+_INJECTION_PATTERNS: list[re.Pattern] = [
     re.compile(r"ignor[ae]\s+(todas?\s+)?(las?\s+)?instruc", re.IGNORECASE),
     re.compile(r"ignore\s+(all\s+)?(previous|above)\s+instruct", re.IGNORECASE),
     re.compile(r"olvida\s+(todo|las\s+instrucciones)", re.IGNORECASE),

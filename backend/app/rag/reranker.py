@@ -3,8 +3,8 @@
 Toma los candidatos recuperados de Qdrant y los reordena por relevancia
 real frente a la consulta, devolviendo (índice_original, score).
 """
+
 from functools import lru_cache
-from typing import List, Tuple
 
 from app.core.config import settings
 
@@ -16,7 +16,7 @@ def _client():
     return cohere.Client(api_key=settings.COHERE_API_KEY or "missing_cohere_key")
 
 
-def rerank(query: str, documents: List[str], top_n: int) -> List[Tuple[int, float]]:
+def rerank(query: str, documents: list[str], top_n: int) -> list[tuple[int, float]]:
     """Devuelve los `top_n` documentos más relevantes como (index, score)."""
     if not documents:
         return []

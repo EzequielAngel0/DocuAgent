@@ -3,6 +3,7 @@
 Normaliza espacios y saltos de línea SIN destruir los marcadores de página
 (`[Página N]`), de los que depende el chunker para rastrear la página.
 """
+
 import re
 
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")

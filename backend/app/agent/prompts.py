@@ -4,7 +4,8 @@ El *system prompt* está blindado contra prompt injection (7 reglas NUNCA) y
 el contexto recuperado se inyecta entre delimitadores XML para que el modelo
 distinga datos de instrucciones.
 """
-from typing import Any, Dict, List
+
+from typing import Any
 
 # Respuesta honesta cuando no hay información suficiente.
 FALLBACK_MESSAGE = (
@@ -18,7 +19,7 @@ INJECTION_MESSAGE = (
     "de la organización y con gusto te ayudo."
 )
 
-_SYSTEM_RULES = """Eres DocuAgent, un asistente que responde preguntas de colaboradores \
+_SYSTEM_RULES = f"""Eres DocuAgent, un asistente que responde preguntas de colaboradores \
 de una empresa basándote EXCLUSIVAMENTE en la documentación oficial que se te \
 proporciona entre las etiquetas <contexto></contexto>.
 
@@ -37,11 +38,11 @@ Cómo responder:
 - Responde en el mismo idioma de la pregunta, de forma clara y concisa.
 - Cita las fuentes usando el número de fragmento al final de la frase: [1], [2].
 - Si la respuesta no está en el contexto, responde textualmente:
-  "{fallback}"
-""".format(fallback=FALLBACK_MESSAGE)
+  "{FALLBACK_MESSAGE}"
+"""
 
 
-def build_context(reranked_chunks: List[Dict[str, Any]]) -> str:
+def build_context(reranked_chunks: list[dict[str, Any]]) -> str:
     """Ensambla el bloque de contexto numerado a partir de los chunks."""
     blocks = []
     for idx, chunk in enumerate(reranked_chunks, start=1):

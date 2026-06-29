@@ -3,8 +3,9 @@
 Primera defensa anti-inyección: si la consulta coincide con patrones de
 manipulación, corta el flujo hacia el fallback antes de tocar el LLM.
 """
-from app.agent.state import AgentState
+
 from app.agent.prompts import INJECTION_MESSAGE
+from app.agent.state import AgentState
 from app.core.sanitizer import detect_injection, sanitize_query
 
 

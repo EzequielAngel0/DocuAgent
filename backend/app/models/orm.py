@@ -4,8 +4,9 @@ Esquema: categories 1—N documents; audit_logs registra cada consulta del
 chat (pregunta, respuesta, confianza, citas y feedback). Las migraciones
 de Alembic toman `Base.metadata` desde aquí.
 """
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,
@@ -21,7 +22,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 def _utcnow() -> datetime:
     """UTC naive (coherente con columnas DateTime sin zona horaria)."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class Base(DeclarativeBase):
@@ -34,7 +35,7 @@ class AdminUser(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    totp_secret: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    totp_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
@@ -49,7 +50,7 @@ class Category(Base):
     icon_name: Mapped[str] = mapped_column(String(50), nullable=False, default="Folder")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
-    documents: Mapped[List["Document"]] = relationship(
+    documents: Mapped[list["Document"]] = relationship(
         "Document", back_populates="category", cascade="all, delete-orphan"
     )
 
@@ -80,6 +81,6 @@ class AuditLog(Base):
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     category: Mapped[str] = mapped_column(String(100), nullable=False)
     # "positive" | "negative" | None
-    feedback: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
-    citations: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(JSON, nullable=True)
+    feedback: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    citations: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)

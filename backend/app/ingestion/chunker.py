@@ -5,8 +5,9 @@ caracteres (sin partir oraciones cuando es posible), con un solapamiento de
 `chunk_overlap` caracteres entre fragmentos contiguos para no perder
 contexto en los bordes. Cada fragmento conserva la página de origen.
 """
+
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 from app.core.config import settings
 
@@ -15,7 +16,7 @@ _PAGE_MARKER = re.compile(r"^\[Página\s+(\d+)\]$")
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 
 
-def _split_sentences(paragraph: str) -> List[str]:
+def _split_sentences(paragraph: str) -> list[str]:
     parts = _SENTENCE_SPLIT.split(paragraph.strip())
     return [p.strip() for p in parts if p.strip()]
 
@@ -24,11 +25,11 @@ def chunk_text(
     text: str,
     chunk_size: int | None = None,
     chunk_overlap: int | None = None,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     chunk_size = chunk_size or settings.CHUNK_MAX_SIZE
     chunk_overlap = chunk_overlap or settings.CHUNK_OVERLAP
 
-    chunks: List[Dict[str, Any]] = []
+    chunks: list[dict[str, Any]] = []
     current_page = 1
     buffer = ""
     buffer_page = 1

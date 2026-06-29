@@ -2,10 +2,12 @@
 
 Separados de los modelos ORM: estos definen lo que entra y sale por HTTP.
 """
+
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
 
 # ----------------------------------------------------------------------
 # Autenticación
@@ -13,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
-    turnstile_token: Optional[str] = None
+    turnstile_token: str | None = None
 
 
 class Verify2FARequest(BaseModel):
@@ -43,10 +45,10 @@ class CategoryCreate(BaseModel):
 
 
 class CategoryUpdate(BaseModel):
-    name: Optional[str] = Field(None, max_length=100)
-    slug: Optional[str] = Field(None, max_length=100)
-    color: Optional[str] = Field(None, max_length=50)
-    icon_name: Optional[str] = Field(None, max_length=50)
+    name: str | None = Field(None, max_length=100)
+    slug: str | None = Field(None, max_length=100)
+    color: str | None = Field(None, max_length=50)
+    icon_name: str | None = Field(None, max_length=50)
 
 
 class CategoryResponse(BaseModel):
@@ -81,7 +83,7 @@ class ChunkInspectorResponse(BaseModel):
     page: int
     category: str
     document_name: str
-    vector: Optional[List[float]] = None
+    vector: list[float] | None = None
 
 
 # ----------------------------------------------------------------------
@@ -99,8 +101,8 @@ class AuditLogResponse(BaseModel):
     response: str
     confidence: float
     category: str
-    feedback: Optional[str] = None
-    citations: Optional[List[Dict[str, Any]]] = None
+    feedback: str | None = None
+    citations: list[dict[str, Any]] | None = None
     created_at: datetime
 
 
@@ -111,4 +113,4 @@ class HealthResponse(BaseModel):
     status: str
     environment: str
     version: str
-    checks: Dict[str, str]
+    checks: dict[str, str]

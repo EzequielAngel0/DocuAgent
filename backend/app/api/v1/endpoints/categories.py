@@ -1,6 +1,6 @@
 """CRUD de categorías (protegido salvo el listado, usado por el chat público)."""
+
 import uuid
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,14 +13,32 @@ from app.models import AdminUser, Category, CategoryCreate, CategoryResponse, Ca
 router = APIRouter()
 
 _DEFAULT_CATEGORIES = [
-    {"id": "cat_1", "name": "Recursos Humanos", "slug": "recursos-humanos", "color": "terracotta", "icon_name": "Users"},
-    {"id": "cat_2", "name": "Finanzas", "slug": "finanzas", "color": "bronze", "icon_name": "Coins"},
-    {"id": "cat_3", "name": "Seguridad e Higiene", "slug": "seguridad", "color": "oliva", "icon_name": "ShieldAlert"},
+    {
+        "id": "cat_1",
+        "name": "Recursos Humanos",
+        "slug": "recursos-humanos",
+        "color": "terracotta",
+        "icon_name": "Users",
+    },
+    {
+        "id": "cat_2",
+        "name": "Finanzas",
+        "slug": "finanzas",
+        "color": "bronze",
+        "icon_name": "Coins",
+    },
+    {
+        "id": "cat_3",
+        "name": "Seguridad e Higiene",
+        "slug": "seguridad",
+        "color": "oliva",
+        "icon_name": "ShieldAlert",
+    },
     {"id": "cat_4", "name": "General", "slug": "general", "color": "carbón", "icon_name": "Folder"},
 ]
 
 
-@router.get("/categories", response_model=List[CategoryResponse])
+@router.get("/categories", response_model=list[CategoryResponse])
 async def list_categories(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Category).order_by(Category.name))
     categories = result.scalars().all()

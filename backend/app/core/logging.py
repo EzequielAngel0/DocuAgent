@@ -7,6 +7,7 @@ con campos clave-valor (`logger.info("evento", documento_id=...)`).
 En desarrollo la salida es coloreada y legible; en producción
 (`LOG_JSON=true`) se emite JSON apto para agregadores de logs.
 """
+
 import logging
 import sys
 

@@ -4,6 +4,7 @@ Soporta PDF, DOCX, XLSX/XLS, CSV, MD/TXT/HTML y JSON. En PDF se inserta un
 marcador `[Página N]` por página para que el chunker preserve la referencia
 de página en las citas.
 """
+
 import csv
 import json
 import os
@@ -78,7 +79,7 @@ class DocumentExtractor:
     @staticmethod
     def _extract_csv(file_path: str) -> str:
         text_content = []
-        with open(file_path, mode="r", encoding="utf-8", errors="ignore") as f:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
             for row in csv.reader(f):
                 if row:
                     text_content.append(", ".join([c.strip() for c in row if c.strip()]))
@@ -86,11 +87,11 @@ class DocumentExtractor:
 
     @staticmethod
     def _extract_text_file(file_path: str) -> str:
-        with open(file_path, mode="r", encoding="utf-8", errors="ignore") as f:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
             return f.read()
 
     @staticmethod
     def _extract_json(file_path: str) -> str:
-        with open(file_path, mode="r", encoding="utf-8", errors="ignore") as f:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
             data = json.load(f)
             return json.dumps(data, indent=2, ensure_ascii=False)

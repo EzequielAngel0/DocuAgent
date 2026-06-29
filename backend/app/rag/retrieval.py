@@ -3,16 +3,15 @@
 Devuelve fragmentos enriquecidos con metadatos y una confianza (0-100)
 proveniente del score de rerank, ya filtrados por el umbral configurado.
 """
-from typing import Any, Dict, List, Optional
+
+from typing import Any
 
 from app.core.config import settings
 from app.rag import embeddings, reranker
 from app.rag.vector_store import vector_store
 
 
-def retrieve_and_rerank(
-    query: str, category_filter: Optional[str] = None
-) -> List[Dict[str, Any]]:
+def retrieve_and_rerank(query: str, category_filter: str | None = None) -> list[dict[str, Any]]:
     # 1. Vectorizar consulta
     query_vector = embeddings.embed_query(query)
 
@@ -30,7 +29,7 @@ def retrieve_and_rerank(
     ranked = reranker.rerank(query, documents, settings.RERANK_TOP_N)
 
     # 4. Filtrar por umbral de confianza y enriquecer metadatos
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     for index, score in ranked:
         if score < settings.CONFIDENCE_THRESHOLD:
             continue

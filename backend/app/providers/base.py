@@ -5,8 +5,9 @@ dos operaciones asíncronas: `generate` (respuesta completa) y `stream`
 (tokens incrementales). El resto de la app depende solo de esta interfaz,
 lo que permite intercambiar proveedores vía configuración.
 """
+
 from abc import ABC, abstractmethod
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 from langchain_core.messages import HumanMessage, SystemMessage
 

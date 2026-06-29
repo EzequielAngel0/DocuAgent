@@ -3,6 +3,7 @@
 Si no quedaron fragmentos tras el rerank, marca `needs_fallback` para que el
 grafo responda honestamente sin invocar al LLM.
 """
+
 from app.agent.prompts import build_context
 from app.agent.state import AgentState
 

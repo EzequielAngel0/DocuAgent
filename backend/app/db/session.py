@@ -1,5 +1,7 @@
-from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from collections.abc import AsyncGenerator
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from app.core.config import settings
 
 # Crear motor asíncrono para PostgreSQL
@@ -18,6 +20,7 @@ SessionLocal = async_sessionmaker(
     expire_on_commit=False,
     class_=AsyncSession,
 )
+
 
 # Dependencia para obtener la sesión de BD en routers
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

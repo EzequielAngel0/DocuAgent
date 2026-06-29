@@ -3,8 +3,9 @@
 Punto de entrada usado por el endpoint de subida (tarea de fondo) y por el
 script de seed.
 """
+
 import uuid
-from typing import Any, Dict, List
+from typing import Any
 
 from app.core.logging import get_logger
 from app.ingestion.chunker import chunk_text
@@ -16,9 +17,7 @@ from app.rag.vector_store import vector_store
 logger = get_logger(__name__)
 
 
-def index_document(
-    document_id: str, document_name: str, file_path: str, category_name: str
-) -> int:
+def index_document(document_id: str, document_name: str, file_path: str, category_name: str) -> int:
     """Indexa un documento en Qdrant y devuelve el número de chunks creados."""
     vector_store.ensure_collection()
 
@@ -30,7 +29,7 @@ def index_document(
 
     vectors = embeddings.embed_documents([c["content"] for c in chunks_meta])
 
-    chunks: List[Dict[str, Any]] = []
+    chunks: list[dict[str, Any]] = []
     for chunk in chunks_meta:
         chunks.append(
             {

@@ -4,8 +4,8 @@ Cohere distingue el tipo de entrada: `search_document` al indexar y
 `search_query` al consultar. Respetar esa distinción es clave para la
 calidad de recuperación.
 """
+
 from functools import lru_cache
-from typing import List
 
 from app.core.config import settings
 
@@ -17,7 +17,7 @@ def _client():
     return cohere.Client(api_key=settings.COHERE_API_KEY or "missing_cohere_key")
 
 
-def embed_documents(texts: List[str]) -> List[List[float]]:
+def embed_documents(texts: list[str]) -> list[list[float]]:
     """Vectoriza fragmentos de documentos para indexar en Qdrant."""
     if not texts:
         return []
@@ -29,7 +29,7 @@ def embed_documents(texts: List[str]) -> List[List[float]]:
     return response.embeddings
 
 
-def embed_query(text: str) -> List[float]:
+def embed_query(text: str) -> list[float]:
     """Vectoriza una consulta del usuario para buscar en Qdrant."""
     response = _client().embed(
         texts=[text],

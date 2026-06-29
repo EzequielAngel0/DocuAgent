@@ -1,4 +1,5 @@
 """Paquete de modelos: ORM (SQLAlchemy) y esquemas (Pydantic)."""
+
 from app.models.orm import AdminUser, AuditLog, Base, Category, Document
 from app.models.schemas import (
     AuditLogResponse,

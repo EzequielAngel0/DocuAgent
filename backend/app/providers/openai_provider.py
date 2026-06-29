@@ -1,4 +1,5 @@
 """Proveedor OpenAI (GPT) sobre langchain-openai."""
+
 from app.core.config import settings
 from app.providers.base import BaseLLMProvider
 

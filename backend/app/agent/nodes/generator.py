@@ -1,4 +1,5 @@
 """Nodo 5 — Generación de la respuesta con el LLM (cadena de fallback)."""
+
 from app.agent.prompts import build_system_prompt
 from app.agent.state import AgentState
 from app.providers import generate_with_fallback

@@ -1,4 +1,5 @@
 """Nodo 2 — Recuperación de candidatos desde Qdrant (top-K)."""
+
 from app.agent.state import AgentState
 from app.core.config import settings
 from app.rag import embeddings

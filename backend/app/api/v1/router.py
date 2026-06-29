@@ -6,6 +6,7 @@ Mantiene rutas estables consumidas por el frontend:
   /chat/ws           WebSocket del chat
   /health            liveness · /health/ready readiness
 """
+
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import auth, categories, chat, documents, feedback, health

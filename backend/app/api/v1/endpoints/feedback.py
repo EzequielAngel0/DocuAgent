@@ -1,5 +1,4 @@
 """Historial de consultas (auditoría) y registro de feedback 👍/👎."""
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,20 +11,18 @@ from app.models import AdminUser, AuditLog, AuditLogResponse, FeedbackUpdateRequ
 router = APIRouter()
 
 
-@router.get("/history", response_model=List[AuditLogResponse])
+@router.get("/history", response_model=list[AuditLogResponse])
 async def get_history(
-    search: Optional[str] = None,
-    category: Optional[str] = None,
-    rating: Optional[str] = None,
+    search: str | None = None,
+    category: str | None = None,
+    rating: str | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: AdminUser = Depends(get_current_user),
 ):
     stmt = select(AuditLog)
 
     if search:
-        stmt = stmt.where(
-            AuditLog.query.icontains(search) | AuditLog.response.icontains(search)
-        )
+        stmt = stmt.where(AuditLog.query.icontains(search) | AuditLog.response.icontains(search))
     if category:
         stmt = stmt.where(AuditLog.category == category)
     if rating == "positive":

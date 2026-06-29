@@ -1,4 +1,5 @@
 """Nodo 3 — Reordenamiento semántico (Cohere Rerank) + filtro por umbral."""
+
 from app.agent.state import AgentState
 from app.core.config import settings
 from app.rag import reranker as rerank_module

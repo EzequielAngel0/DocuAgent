@@ -3,6 +3,7 @@
 El healthcheck del contenedor usa `/health` (liveness): debe responder rápido
 sin tocar la red. `/health/ready` valida PostgreSQL y Qdrant para orquestación.
 """
+
 import asyncio
 
 from fastapi import APIRouter

@@ -1,4 +1,5 @@
 """Nodo terminal de fallback: respuesta honesta sin invocar al LLM."""
+
 from app.agent.prompts import FALLBACK_MESSAGE
 from app.agent.state import AgentState
 

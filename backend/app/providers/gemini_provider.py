@@ -1,4 +1,5 @@
 """Proveedor Google Gemini sobre langchain-google-genai."""
+
 from app.core.config import settings
 from app.providers.base import BaseLLMProvider
 

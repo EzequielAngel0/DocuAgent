@@ -1,4 +1,5 @@
 """Nodos del grafo del agente RAG."""
+
 from app.agent.nodes.context_builder import context_builder
 from app.agent.nodes.fallback import fallback
 from app.agent.nodes.generator import generator

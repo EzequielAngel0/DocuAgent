@@ -5,7 +5,8 @@ búsqueda con filtro por categoría, borrado y scroll por documento) tras una
 única clase. El resto del backend no debe hablar con `qdrant_client`
 directamente.
 """
-from typing import Any, Dict, List, Optional
+
+from typing import Any
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -23,12 +24,10 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-def _category_filter(category: Optional[str]) -> Optional[Filter]:
+def _category_filter(category: str | None) -> Filter | None:
     if not category:
         return None
-    return Filter(
-        must=[FieldCondition(key="category", match=MatchValue(value=category))]
-    )
+    return Filter(must=[FieldCondition(key="category", match=MatchValue(value=category))])
 
 
 class VectorStore:
@@ -55,20 +54,20 @@ class VectorStore:
         except Exception as exc:  # noqa: BLE001
             logger.error("qdrant_ensure_collection_failed", error=str(exc))
 
-    def upsert_chunks(self, chunks: List[Dict[str, Any]], vectors: List[List[float]]) -> int:
+    def upsert_chunks(self, chunks: list[dict[str, Any]], vectors: list[list[float]]) -> int:
         """Inserta fragmentos con su vector y payload. Devuelve cuántos."""
         self.ensure_collection()
         points = [
             PointStruct(id=chunk["point_id"], vector=vector, payload=chunk["payload"])
-            for chunk, vector in zip(chunks, vectors)
+            for chunk, vector in zip(chunks, vectors, strict=False)
         ]
         if points:
             self.client.upsert(collection_name=self.collection, points=points)
         return len(points)
 
     def search(
-        self, query_vector: List[float], category: Optional[str], limit: int
-    ) -> List[Dict[str, Any]]:
+        self, query_vector: list[float], category: str | None, limit: int
+    ) -> list[dict[str, Any]]:
         self.ensure_collection()
         results = self.client.search(
             collection_name=self.collection,
@@ -84,29 +83,19 @@ class VectorStore:
             self.client.delete(
                 collection_name=self.collection,
                 points_selector=Filter(
-                    must=[
-                        FieldCondition(
-                            key="document_id", match=MatchValue(value=document_id)
-                        )
-                    ]
+                    must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))]
                 ),
             )
         except Exception as exc:  # noqa: BLE001
-            logger.error(
-                "qdrant_delete_failed", document_id=document_id, error=str(exc)
-            )
+            logger.error("qdrant_delete_failed", document_id=document_id, error=str(exc))
 
     def scroll_by_document(
         self, document_id: str, limit: int = 100, with_vectors: bool = True
-    ) -> List[Any]:
+    ) -> list[Any]:
         points, _ = self.client.scroll(
             collection_name=self.collection,
             scroll_filter=Filter(
-                must=[
-                    FieldCondition(
-                        key="document_id", match=MatchValue(value=document_id)
-                    )
-                ]
+                must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))]
             ),
             limit=limit,
             with_payload=True,

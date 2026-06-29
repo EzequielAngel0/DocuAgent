@@ -5,6 +5,7 @@ categorías y registra cada archivo evitando duplicados por nombre.
 
 Uso:  python -m app.scripts.seed_documents
 """
+
 import asyncio
 import os
 import uuid
@@ -18,10 +19,38 @@ from app.models import Category, Document
 DOCUMENTS_DIR = os.path.abspath(os.path.join(os.getcwd(), "documents"))
 
 CATEGORIES_DATA = [
-    {"id": "cat_rh", "name": "Recursos Humanos", "slug": "recursos-humanos", "color": "terracotta", "icon_name": "Users", "folder": "rh"},
-    {"id": "cat_fin", "name": "Finanzas", "slug": "finanzas", "color": "bronze", "icon_name": "Coins", "folder": "finanzas"},
-    {"id": "cat_seg", "name": "Seguridad e Higiene", "slug": "seguridad", "color": "oliva", "icon_name": "ShieldAlert", "folder": "seguridad"},
-    {"id": "cat_gen", "name": "General", "slug": "general", "color": "carbón", "icon_name": "Folder", "folder": "general"},
+    {
+        "id": "cat_rh",
+        "name": "Recursos Humanos",
+        "slug": "recursos-humanos",
+        "color": "terracotta",
+        "icon_name": "Users",
+        "folder": "rh",
+    },
+    {
+        "id": "cat_fin",
+        "name": "Finanzas",
+        "slug": "finanzas",
+        "color": "bronze",
+        "icon_name": "Coins",
+        "folder": "finanzas",
+    },
+    {
+        "id": "cat_seg",
+        "name": "Seguridad e Higiene",
+        "slug": "seguridad",
+        "color": "oliva",
+        "icon_name": "ShieldAlert",
+        "folder": "seguridad",
+    },
+    {
+        "id": "cat_gen",
+        "name": "General",
+        "slug": "general",
+        "color": "carbón",
+        "icon_name": "Folder",
+        "folder": "general",
+    },
 ]
 
 

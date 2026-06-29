@@ -8,8 +8,8 @@ Además de `run_agent` (ejecución completa, no-streaming), se expone
 `prepare_context`, que ejecuta los nodos previos a la generación reutilizando
 las mismas funciones para que el WebSocket pueda transmitir tokens en vivo.
 """
+
 from functools import lru_cache
-from typing import Optional
 
 from langgraph.graph import END, START, StateGraph
 
@@ -73,14 +73,14 @@ def build_agent_graph():
     return graph.compile()
 
 
-async def run_agent(query: str, category: Optional[str] = None) -> AgentState:
+async def run_agent(query: str, category: str | None = None) -> AgentState:
     """Ejecuta el grafo completo (sin streaming) y devuelve el estado final."""
     graph = build_agent_graph()
     initial: AgentState = {"query": query, "category": category}
     return await graph.ainvoke(initial)
 
 
-def prepare_context(query: str, category: Optional[str] = None) -> AgentState:
+def prepare_context(query: str, category: str | None = None) -> AgentState:
     """Ejecuta los nodos previos a la generación (para streaming en el WS).
 
     Síncrono a propósito: hace IO bloqueante (Cohere/Qdrant), por lo que el

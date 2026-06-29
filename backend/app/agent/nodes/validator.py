@@ -5,6 +5,7 @@ información, se enruta al fallback estándar. No re-evalúa el contenido con
 otro LLM (eso encarecería cada consulta); la garantía fuerte la dan el
 system prompt blindado y el filtro por umbral de confianza.
 """
+
 from app.agent.prompts import FALLBACK_MESSAGE
 from app.agent.state import AgentState
 
