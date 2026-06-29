@@ -149,9 +149,9 @@ score de Cohere Rerank (`CONFIDENCE_THRESHOLD`, 0.3).
   (slowapi, clave por IP real CF), TrustedHost en prod, validación Pydantic
   estricta. _Pendiente_: rate limit del WebSocket de chat.
 - **Auth admin**: email+password (bcrypt) → Cloudflare Turnstile (anti-bot) →
-  TOTP 2FA (pyotp) → JWT con `iss`/`aud` (7d). Admin **sembrado desde `.env` al
-  arrancar** (`ensure_default_admin`). _Pendiente_: cookie `httponly` (hoy
-  legible por JS → riesgo XSS), refresh con rotación.
+  TOTP 2FA (pyotp) → JWT con `iss`/`aud` (7d) en **cookie httponly+secure**
+  (dominio compartido; frontend con `credentials:include`, sin token en JS).
+  Admin **sembrado desde `.env` al arrancar**. _Pendiente_: refresh con rotación.
 - **Uploads**: allowlist de extensiones + límite de tamaño (50MB, streaming) +
   **verificación de magic bytes** (contenido vs. extensión).
 - **Config prod**: fail-fast si arranca con secretos inseguros/incompletos.
@@ -346,7 +346,9 @@ staging: `docs/deployment/staging-runbook.md`. Decisiones: `docs/project/decisio
   frontend, seed de documentos, tests unitarios verdes + grafo verificado.
 - **Hecho (seguridad)**: security headers, rate limit login/2FA, JWT iss/aud,
   validación de magic bytes, fail-fast de secretos en prod, TrustedHost.
+- **Hecho (staging)**: stack levantado en `dev.angelezequiel.dev` (túnel),
+  health/readiness verdes, login+TOTP+cookie httponly validados end-to-end.
 - **Pendiente para staging→prod**: provisionar instancia OCI + OCIR; crear los
-  secrets/variables de GitHub; activar `DEPLOY_ENABLED`; rate limit del WebSocket;
-  cookie `httponly` (refactor frontend); rotar llaves de staging; pruebas e2e en
-  staging con el túnel. Detalle y prioridades: `docs/architecture/security-audit.md`.
+  secrets/variables de GitHub; activar `DEPLOY_ENABLED`; rotar llaves de staging;
+  validar en navegador el chat RAG y la carga de documentos. Detalle y
+  prioridades: `docs/architecture/security-audit.md`.

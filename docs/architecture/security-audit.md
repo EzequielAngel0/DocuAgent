@@ -38,11 +38,12 @@ riesgos residuales más relevantes son: el **token JWT en cookie legible por JS*
 | Contenedores: `no-new-privileges` + `cap_drop: ALL` (app) | ✅ | `podman-compose.yml` |
 | CI: `pip-audit` + Trivy (informativo) | ✅ | `.github/workflows/ci.yml` |
 
-> **httponly**: el backend ya lee la cookie (`get_current_user`) y la fija con
-> dominio compartido, de modo que activar `httponly=True` solo requiere
-> refactorizar el frontend a `credentials: "include"` (deja de leer
-> `document.cookie`). Se dejó `httponly=False` para no romper el panel actual
-> hasta hacer ese refactor con prueba en navegador.
+> **httponly: ✅ hecho.** La sesión del admin migró a cookie `httponly` +
+> `secure` + `samesite=lax` + dominio compartido. El frontend dejó de leer
+> `document.cookie`: usa un cliente `apiFetch` con `credentials: "include"` y el
+> backend autentica por la cookie. Validado end-to-end por el túnel
+> (login → TOTP → cookie con los 4 flags → `/admin/*` solo con cookie → 401 sin
+> auth). El token ya no vive en JS (no robable por XSS).
 
 ## Análisis por área
 
@@ -124,8 +125,7 @@ riesgos residuales más relevantes son: el **token JWT en cookie legible por JS*
 ## Recomendaciones priorizadas
 
 **P0 (antes de exponer a usuarios reales)**
-1. Cookie de sesión `httponly` (mitiga robo de token por XSS). **Backend listo**
-   (lee cookie + dominio); falta el refactor del frontend a `credentials:include`.
+1. ~~Cookie de sesión `httponly`~~ — **hecho** (validado end-to-end por el túnel).
 2. Rotar todas las llaves de staging; usar OCI Vault en prod; no reutilizar.
 3. ~~Rate limit en el WebSocket de chat~~ — **hecho** (`ws_ratelimit.py`).
 
