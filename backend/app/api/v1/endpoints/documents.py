@@ -23,7 +23,7 @@ from sqlalchemy.future import select
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.logging import get_logger
-from app.core.validation import validate_file_signature
+from app.core.validation import is_safe_archive, validate_file_signature
 from app.db.session import SessionLocal, get_db
 from app.ingestion import delete_document_vectors, index_document
 from app.models import AdminUser, Category, ChunkInspectorResponse, Document, DocumentResponse
@@ -119,6 +119,13 @@ async def upload_document(
         os.remove(saved_path)
         raise HTTPException(
             status_code=415, detail="El contenido del archivo no coincide con su extensión."
+        )
+
+    # Anti zip-bomb para OOXML (docx/xlsx son contenedores ZIP).
+    if ext in (".docx", ".xlsx") and not is_safe_archive(saved_path):
+        os.remove(saved_path)
+        raise HTTPException(
+            status_code=413, detail="El archivo comprimido es demasiado grande al descomprimir."
         )
 
     new_doc = Document(

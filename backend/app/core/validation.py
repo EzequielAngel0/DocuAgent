@@ -1,8 +1,11 @@
 """Validación de firma de archivos (magic bytes) en uploads.
 
 Complementa la allowlist de extensiones: verifica que el contenido real del
-archivo coincida con su extensión, para frenar archivos disfrazados.
+archivo coincida con su extensión, para frenar archivos disfrazados, y revisa
+que los OOXML (docx/xlsx) no sean zip-bombs.
 """
+
+import zipfile
 
 # Firmas binarias conocidas por extensión (primeros bytes del archivo).
 _SIGNATURES: dict[str, list[bytes]] = {
@@ -33,3 +36,22 @@ def validate_file_signature(path: str, ext: str) -> bool:
 
     # Extensión no contemplada aquí: se delega a la allowlist previa.
     return True
+
+
+# Límites para OOXML (docx/xlsx son contenedores ZIP).
+_MAX_UNCOMPRESSED_BYTES = 200 * 1024 * 1024  # 200 MB descomprimidos
+_MAX_COMPRESSION_RATIO = 100  # descomprimido / comprimido
+
+
+def is_safe_archive(path: str) -> bool:
+    """False si el ZIP (docx/xlsx) parece un zip-bomb (tamaño/ratio excesivos)."""
+    try:
+        with zipfile.ZipFile(path) as zf:
+            infos = zf.infolist()
+            total = sum(i.file_size for i in infos)
+            compressed = sum(i.compress_size for i in infos) or 1
+    except zipfile.BadZipFile:
+        return False
+    if total > _MAX_UNCOMPRESSED_BYTES:
+        return False
+    return total / compressed <= _MAX_COMPRESSION_RATIO

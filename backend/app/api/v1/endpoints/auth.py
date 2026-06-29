@@ -115,7 +115,11 @@ async def verify_2fa(
         expires_delta=timedelta(days=settings.JWT_REFRESH_EXPIRE_DAYS),
     )
 
-    # Cookie legible por el middleware de Next.js. `secure` solo en prod/staging.
+    # NOTA SEGURIDAD: hoy `httponly=False` porque el frontend lee la cookie con
+    # `document.cookie` para enviarla en Authorization. El backend YA acepta la
+    # cookie (get_current_user) y la fija con dominio compartido, así que migrar
+    # a `httponly=True` solo requiere refactorizar el frontend a
+    # `credentials: "include"` (P0 en security-audit.md). Mientras tanto:
     response.set_cookie(
         key="auth_token",
         value=access_token,
@@ -124,6 +128,7 @@ async def verify_2fa(
         max_age=3600 * 24 * settings.JWT_REFRESH_EXPIRE_DAYS,
         samesite="lax",
         path="/",
+        domain=settings.COOKIE_DOMAIN or None,
     )
 
     return {
@@ -159,5 +164,5 @@ async def setup_2fa(
 
 @router.post("/logout")
 async def logout(response: Response):
-    response.delete_cookie("auth_token", path="/")
+    response.delete_cookie("auth_token", path="/", domain=settings.COOKIE_DOMAIN or None)
     return {"detail": "Sesión cerrada correctamente."}

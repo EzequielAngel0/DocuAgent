@@ -15,13 +15,16 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.agent import prepare_context
 from app.agent.prompts import FALLBACK_MESSAGE, build_system_prompt
+from app.core.config import settings
 from app.core.logging import get_logger
+from app.core.ws_ratelimit import WSRateLimiter, ws_client_ip
 from app.db.session import SessionLocal
 from app.models import AuditLog
 from app.providers import stream_with_fallback
 
 router = APIRouter()
 logger = get_logger(__name__)
+_chat_limiter = WSRateLimiter(settings.RATE_LIMIT_CHAT_PER_MIN, window_seconds=60)
 
 
 async def _save_log(
@@ -47,12 +50,20 @@ async def _save_log(
 @router.websocket("/ws")
 async def chat_websocket(websocket: WebSocket):
     await websocket.accept()
+    client_ip = ws_client_ip(websocket)
     try:
         while True:
             data = json.loads(await websocket.receive_text())
             query = (data.get("query") or "").strip()
             category = data.get("category")
             if not query:
+                continue
+
+            # Rate limit por IP: evita abuso y costo de LLM/Cohere.
+            if not await _chat_limiter.allow(client_ip):
+                await websocket.send_json(
+                    {"type": "error", "error": "Demasiadas consultas, espera un momento."}
+                )
                 continue
 
             await websocket.send_json({"type": "status", "status": "searching"})

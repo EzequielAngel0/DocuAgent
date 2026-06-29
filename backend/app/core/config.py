@@ -148,6 +148,11 @@ class Settings(BaseSettings):
     # Rate limiting (slowapi) en endpoints sensibles
     RATE_LIMIT_LOGIN: str = "5/15minute"
     RATE_LIMIT_2FA: str = "10/15minute"
+    # Rate limit del WebSocket de chat (mensajes por minuto por IP)
+    RATE_LIMIT_CHAT_PER_MIN: int = 20
+    # Dominio de la cookie de sesión (".angelezequiel.dev" comparte subdominios;
+    # vacío = host-only, válido para localhost en desarrollo)
+    COOKIE_DOMAIN: str = ""
 
     # Hosts permitidos (TrustedHostMiddleware en prod; vacío = sin restricción)
     ALLOWED_HOSTS: str = ""
