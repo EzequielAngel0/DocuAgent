@@ -2257,23 +2257,26 @@ code, pre {
   text-align: center;
   cursor: pointer;
   background-color: var(--bg-secondary);
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
   margin-bottom: var(--space-md);
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .upload-dropzone:hover {
   border-color: var(--color-primary);
 }
 
-.upload-input-file {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
+.upload-dropzone.dragging {
+  border-color: var(--color-primary);
+  background-color: rgba(192, 87, 70, 0.12);
+}
+
+/* Input de archivo realmente oculto (lo dispara el <label> contenedor). */
+.upload-input-hidden {
+  display: none;
 }
 
 .upload-icon-style {
@@ -2565,10 +2568,6 @@ code, pre {
   color: #9bbf86;
 }
 
-.file-drop-zone.dragging {
-  border-color: var(--color-primary);
-  background-color: rgba(192, 87, 70, 0.1);
-}
 
 /* HISTORIAL DETALLES */
 .detail-field {

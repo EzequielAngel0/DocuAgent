@@ -229,35 +229,37 @@ export default function AdminDocumentsPage() {
 
               <div className="form-group">
                 <label className="form-label">Seleccionar Archivo</label>
-                <div
-                  className={`file-drop-zone ${isDragging ? "dragging" : ""}`}
+                <label
+                  htmlFor="file-upload-input"
+                  className={`upload-dropzone ${isDragging ? "dragging" : ""}`}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                 >
-                  <Upload size={32} className="icon-terracotta" style={{ marginBottom: "var(--space-sm)" }} />
                   <input
                     type="file"
                     id="file-upload-input"
-                    className="file-hidden-input"
+                    className="upload-input-hidden"
                     onChange={handleFileChange}
                     accept=".pdf,.docx,.xlsx,.xls,.csv,.md,.txt,.html,.json"
                   />
-                  <label htmlFor="file-upload-input" className="file-drop-label">
-                    {uploadFile ? (
-                      <span className="file-name-highlight">{uploadFile.name}</span>
-                    ) : (
-                      "Arrastra un archivo o haz clic para buscar"
-                    )}
-                  </label>
-                  <span className="file-drop-sub">Soporta PDF, DOCX, XLSX, CSV, MD, JSON</span>
-                </div>
+                  <Upload size={30} className="upload-icon-style" />
+                  <span
+                    className="upload-title"
+                    style={uploadFile ? { color: "var(--color-primary)" } : undefined}
+                  >
+                    {uploadFile ? uploadFile.name : "Arrastra un archivo o haz clic para buscar"}
+                  </span>
+                  <span className="upload-formats">
+                    Soporta PDF, DOCX, XLSX, CSV, MD, TXT, HTML, JSON
+                  </span>
+                </label>
               </div>
 
               {uploadProgress !== null && (
-                <div className="progress-bar-container">
-                  <div className="progress-bar" style={{ width: `${uploadProgress}%` }}></div>
-                  <span className="progress-text">{uploadProgress}% Indexando...</span>
+                <div className="upload-progress-bar-container">
+                  <div className="upload-progress-fill" style={{ width: `${uploadProgress}%` }}></div>
+                  <span className="upload-progress-text">{uploadProgress}% Indexando...</span>
                 </div>
               )}
 
