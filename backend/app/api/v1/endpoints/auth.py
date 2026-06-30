@@ -12,6 +12,7 @@ from sqlalchemy.future import select
 
 from app.api.deps import get_current_user
 from app.core.config import settings
+from app.core.lockout import login_lockout
 from app.core.ratelimit import limiter
 from app.core.security import (
     create_access_token,
@@ -99,17 +100,26 @@ async def verify_2fa(
     response: Response,
     db: AsyncSession = Depends(get_db),
 ):
+    lock_key = verify_data.email.lower()
+    if login_lockout.is_locked(lock_key):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Cuenta bloqueada temporalmente por intentos fallidos. Intenta más tarde.",
+        )
+
     result = await db.execute(select(AdminUser).where(AdminUser.email == verify_data.email))
     user = result.scalars().first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
 
     if not (user.totp_secret and verify_totp_code(user.totp_secret, verify_data.code)):
+        login_lockout.record_fail(lock_key)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Código de verificación 2FA incorrecto.",
         )
 
+    login_lockout.reset(lock_key)
     access_token = create_access_token(
         data={"sub": user.email},
         expires_delta=timedelta(days=settings.JWT_REFRESH_EXPIRE_DAYS),

@@ -151,6 +151,12 @@ class Settings(BaseSettings):
     # Rate limiting (slowapi) en endpoints sensibles
     RATE_LIMIT_LOGIN: str = "5/15minute"
     RATE_LIMIT_2FA: str = "10/15minute"
+    # Límite global por defecto para toda la API (por IP).
+    RATE_LIMIT_DEFAULT: str = "200/minute"
+
+    # Bloqueo de cuenta tras N fallos de 2FA dentro de la ventana.
+    LOGIN_LOCKOUT_MAX_FAILS: int = 5
+    LOGIN_LOCKOUT_WINDOW_SECONDS: int = 900  # 15 min
     # Rate limit del WebSocket de chat (mensajes por minuto por IP)
     RATE_LIMIT_CHAT_PER_MIN: int = 20
     # Dominio de la cookie de sesión (".angelezequiel.dev" comparte subdominios;

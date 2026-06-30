@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app import __version__
 from app.api.v1.router import api_router
@@ -48,9 +49,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Rate limiting (slowapi): registrar limiter y handler de 429.
+# Rate limiting (slowapi): limiter + handler de 429 + middleware (límite global).
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Cabeceras de seguridad en todas las respuestas.
 app.add_middleware(SecurityHeadersMiddleware)
