@@ -132,6 +132,12 @@ export default function ChatArea({
             placeholder="Pregunta sobre las políticas, manuales, etc..."
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                if (inputValue.trim() && !isTyping) onSendMessage();
+              }
+            }}
             disabled={isTyping}
           />
           <button

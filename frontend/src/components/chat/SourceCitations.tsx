@@ -26,7 +26,9 @@ export default function SourceCitations({ citations }: SourceCitationsProps) {
         onClick={() => setIsOpen(!isOpen)}
       >
         <Link2 size={12} style={{ marginRight: "6px" }} />
-        <span>Ver {citations.length} fuentes citadas</span>
+        <span>
+          Ver {citations.length} {citations.length === 1 ? "fuente citada" : "fuentes citadas"}
+        </span>
         {isOpen ? <ChevronUp size={12} style={{ marginLeft: "auto" }} /> : <ChevronDown size={12} style={{ marginLeft: "auto" }} />}
       </button>
 

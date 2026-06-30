@@ -145,27 +145,28 @@ export default function ChatPage() {
         wsConnected = true;
         clearTimeout(connectTimeout);
         ws?.send(JSON.stringify({ query: messageText }));
-        
-        // Agregar mensaje assistant vacío en UI para ir rellenando
-        setMessages((prev) => [...prev, {
-          id: botMsgId,
-          sender: "assistant",
-          text: "",
-          citations: []
-        }]);
+        // El mensaje del asistente se crea al llegar el primer token; mientras
+        // tanto solo se muestra el indicador de "escribiendo" (isTyping).
       };
 
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
-        
+
         if (msg.type === "token") {
           setIsTyping(false); // Ocultar animación una vez empieza el stream
           accumulatedText += msg.token;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === botMsgId ? { ...m, text: accumulatedText } : m
-            )
-          );
+          setMessages((prev) => {
+            const exists = prev.some((m) => m.id === botMsgId);
+            if (exists) {
+              return prev.map((m) =>
+                m.id === botMsgId ? { ...m, text: accumulatedText } : m
+              );
+            }
+            return [
+              ...prev,
+              { id: botMsgId, sender: "assistant", text: accumulatedText, citations: [] },
+            ];
+          });
         } else if (msg.type === "done") {
           const finalCitations = msg.citations.map((c: any) => ({
             documentName: c.title,
