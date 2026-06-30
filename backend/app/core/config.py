@@ -95,9 +95,12 @@ class Settings(BaseSettings):
     # LLM — proveedor activo y cadena de fallback
     # ------------------------------------------------------------------
     LLM_PROVIDER: str = "gemini"  # openai | gemini | anthropic | ollama
-    LLM_MODEL: str = "gemini-1.5-flash"  # modelo del proveedor ACTIVO
+    LLM_MODEL: str = "gemini-2.5-flash"  # modelo del proveedor ACTIVO
     LLM_TEMPERATURE: float = 0.1
     LLM_MAX_TOKENS: int = 2048
+    # Reintentos del cliente LLM: bajo, para fallar rápido al siguiente proveedor
+    # ante errores no transitorios (modelo inválido, 401) en vez de colgarse.
+    LLM_MAX_RETRIES: int = 1
     # Orden de respaldo si el proveedor activo falla (coma-separado).
     LLM_FALLBACK_CHAIN: str = "openai,gemini,anthropic,ollama"
 
@@ -116,7 +119,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str = "gpt-4o-mini"
     GEMINI_API_KEY: str | None = None
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
     ANTHROPIC_API_KEY: str | None = None
     ANTHROPIC_MODEL: str = "claude-haiku-4-5-20251001"
     OLLAMA_BASE_URL: str = "http://ollama:11434"

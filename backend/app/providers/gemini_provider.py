@@ -17,4 +17,5 @@ class GeminiProvider(BaseLLMProvider):
             temperature=self.temperature,
             max_output_tokens=self.max_tokens,
             google_api_key=settings.GEMINI_API_KEY,
+            max_retries=settings.LLM_MAX_RETRIES,
         )

@@ -17,4 +17,5 @@ class OpenAIProvider(BaseLLMProvider):
             temperature=self.temperature,
             max_tokens=self.max_tokens,
             api_key=settings.OPENAI_API_KEY,
+            max_retries=settings.LLM_MAX_RETRIES,
         )
