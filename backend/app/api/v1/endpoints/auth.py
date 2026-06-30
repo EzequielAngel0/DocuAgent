@@ -4,7 +4,6 @@ import base64
 import io
 from datetime import timedelta
 
-import httpx
 import qrcode
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +13,7 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.lockout import login_lockout
 from app.core.ratelimit import limiter
+from app.core.turnstile import verify_turnstile
 from app.core.security import (
     create_access_token,
     generate_totp_secret,
@@ -26,22 +26,6 @@ from app.db.session import get_db
 from app.models import AdminUser, LoginRequest, Setup2FAResponse, Verify2FARequest
 
 router = APIRouter()
-
-
-async def verify_turnstile(token: str) -> bool:
-    """Verifica el token de Turnstile contra la API de Cloudflare."""
-    if not settings.TURNSTILE_SECRET_KEY or not token:
-        return False
-    try:
-        async with httpx.AsyncClient() as client:
-            res = await client.post(
-                "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-                data={"secret": settings.TURNSTILE_SECRET_KEY, "response": token},
-                timeout=5.0,
-            )
-            return res.json().get("success", False)
-    except Exception:  # noqa: BLE001
-        return False
 
 
 async def ensure_default_admin(db: AsyncSession) -> None:

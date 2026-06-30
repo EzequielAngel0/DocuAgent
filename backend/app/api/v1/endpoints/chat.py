@@ -17,6 +17,7 @@ from app.agent import prepare_context
 from app.agent.prompts import FALLBACK_MESSAGE, build_system_prompt
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.core.turnstile import chat_turnstile_gate, verify_turnstile
 from app.core.ws_ratelimit import WSRateLimiter, ws_client_ip
 from app.db.session import SessionLocal
 from app.models import AuditLog
@@ -25,6 +26,8 @@ from app.providers import stream_with_fallback
 router = APIRouter()
 logger = get_logger(__name__)
 _chat_limiter = WSRateLimiter(settings.RATE_LIMIT_CHAT_PER_MIN, window_seconds=60)
+# Tope GLOBAL (todas las IPs juntas) por hora: límite duro de costo de LLM/Cohere.
+_chat_global_limiter = WSRateLimiter(settings.RATE_LIMIT_CHAT_GLOBAL_PER_HOUR, window_seconds=3600)
 
 
 async def _save_log(
@@ -59,10 +62,33 @@ async def chat_websocket(websocket: WebSocket):
             if not query:
                 continue
 
+            # Anti-bot Turnstile (una sola vez por IP; la verificación se cachea).
+            if settings.CHAT_REQUIRE_TURNSTILE and not chat_turnstile_gate.is_verified(client_ip):
+                if await verify_turnstile(data.get("turnstile_token") or ""):
+                    chat_turnstile_gate.mark_verified(client_ip)
+                else:
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "error": "Verificación anti-bot requerida. Recarga la página.",
+                        }
+                    )
+                    continue
+
             # Rate limit por IP: evita abuso y costo de LLM/Cohere.
             if not await _chat_limiter.allow(client_ip):
                 await websocket.send_json(
                     {"type": "error", "error": "Demasiadas consultas, espera un momento."}
+                )
+                continue
+
+            # Tope GLOBAL por hora: corta el costo total aunque vengan de muchas IPs.
+            if not await _chat_global_limiter.allow("__global__"):
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "error": "El servicio alcanzó su límite por ahora. Intenta más tarde.",
+                    }
                 )
                 continue
 

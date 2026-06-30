@@ -159,6 +159,13 @@ class Settings(BaseSettings):
     LOGIN_LOCKOUT_WINDOW_SECONDS: int = 900  # 15 min
     # Rate limit del WebSocket de chat (mensajes por minuto por IP)
     RATE_LIMIT_CHAT_PER_MIN: int = 20
+    # Tope GLOBAL de mensajes de chat por hora (control de costo de LLM/Cohere).
+    RATE_LIMIT_CHAT_GLOBAL_PER_HOUR: int = 500
+    # Exigir Turnstile en el chat público (anti-bot). Flag para poder apagarlo
+    # rápido sin tocar código si rompiera el flujo.
+    CHAT_REQUIRE_TURNSTILE: bool = False
+    # TTL del cache de IP verificada por Turnstile en el chat (segundos).
+    TURNSTILE_GATE_TTL_SECONDS: int = 3600
     # Dominio de la cookie de sesión (".angelezequiel.dev" comparte subdominios;
     # vacío = host-only, válido para localhost en desarrollo)
     COOKIE_DOMAIN: str = ""
