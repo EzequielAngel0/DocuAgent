@@ -20,14 +20,15 @@ Estado vivo de lo que falta. Lo ya hecho está en `CLAUDE.md` (sección
 - [ ] **Llaves**: rotar las de staging; usar **OCI Vault**; conseguir una key de
       **Gemini con cuota de pago** (la free tier limita a modelos concretos).
 
-## 🟠 Seguridad (de `security-audit.md`, lo que queda)
+## 🟠 Seguridad
 
 - [ ] **Refresh token con rotación + revocación** (`jti`); hoy JWT de 7 días sin refresh.
-- [ ] Bloqueo de cuenta tras N fallos de 2FA.
-- [ ] **Rate limit global** por defecto en la API (hoy solo login/2FA y el WS de chat).
-- [ ] **CSP propia del frontend** (Next), además de la del backend.
-- [ ] Escaneo de deps/imágenes en CI **bloqueante** (hoy informativo).
-- [ ] Límites de CPU/memoria y `read_only` en compose.
+- [x] ~~Bloqueo de cuenta tras N fallos de 2FA~~ — hecho (`core/lockout.py`).
+- [x] ~~Rate limit global por defecto en la API~~ — hecho (SlowAPIMiddleware).
+- [x] ~~CSP propia del frontend~~ — hecho (`next.config.ts`).
+- [x] ~~Escaneo en CI bloqueante~~ — hecho (Trivy bloquea en CRITICAL).
+- [x] ~~Límites de CPU/memoria en compose~~ — hecho. **`read_only` del frontend: pendiente**
+      (requiere `tmpfs` para `/tmp` y HOME; no se hizo para no arriesgar el arranque).
 
 ## 🟡 Producto / funcionalidad
 
@@ -37,16 +38,18 @@ Estado vivo de lo que falta. Lo ya hecho está en `CLAUDE.md` (sección
       historial real multi-dispositivo.
 - [ ] **Detección de idioma** real en chunks (hoy no se detecta; multilingüe
       es/en/pt soportado por embeddings pero no se etiqueta).
-- [ ] **Re-generación** en el grafo si el validador detecta alucinación (hoy
-      solo enruta a fallback).
-- [ ] **Página `setup-2fa`** en el frontend (documentada, no existe; el TOTP se
-      siembra por `.env`).
+- [x] ~~Re-generación en el grafo~~ — hecho (reintenta 1 vez ante respuesta vacía
+      antes de caer al fallback; guarda anti-bucle).
+- [~] **Página `setup-2fa`**: se deja **así por diseño** — el TOTP se siembra por
+      `.env`, evitando una superficie de ataque extra (decisión del dueño).
 - [ ] Seed de **documentos reales** de la empresa.
 
 ## 🟢 Calidad / DX / frontend
 
-- [ ] **Tests de frontend** (no hay ninguno).
-- [ ] Más tests backend: integración con Postgres/Qdrant reales y e2e del chat.
+- [x] ~~Tests de frontend~~ — setup base con **Vitest** + tests de `lib/api`
+      (queda ampliar cobertura a componentes con Testing Library).
+- [x] Tests backend ampliados (lockout, re-generación; 68 en verde). Falta
+      integración real con Postgres/Qdrant y e2e del chat.
 - [ ] `mypy` estricto y bloqueante (hoy informativo en CI).
 - [ ] **Refactor frontend** a capa `hooks/ + types/` (hoy solo `lib/api.ts`; el
       resto de la lógica vive inline en cada `page.tsx`).
