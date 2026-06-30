@@ -1,0 +1,22 @@
+# Copia a terraform.tfvars y rellena. NUNCA commitees terraform.tfvars real.
+
+# De ~/.oci/config (perfil DEFAULT)
+tenancy_ocid     = "ocid1.tenancy.oc1..xxxx"
+user_ocid        = "ocid1.user.oc1..xxxx"
+fingerprint      = "aa:bb:cc:dd:..."
+private_key_path = "~/.oci/oci_api_key.pem"
+region           = "mx-queretaro-1"
+
+# Compartment destino (puede ser el tenancy raíz)
+compartment_ocid = "ocid1.compartment.oc1..xxxx"
+
+# Tu IP pública /32 para permitir el acceso al Bastion
+bastion_client_cidrs = ["203.0.113.7/32"]
+
+# Tu llave SSH pública (cat ~/.ssh/id_ed25519.pub)
+ssh_public_key = "ssh-ed25519 AAAA... tu_correo"
+
+# Proyectos = una instancia por entrada. Añade más para escalar.
+projects = {
+  docuagent = { ocpus = 1, memory_gbs = 6, boot_gbs = 50 }
+}
