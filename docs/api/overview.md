@@ -9,7 +9,13 @@ Producción: https://<domain>/api/v1
 
 ## Autenticación
 
-Sin autenticación en el MVP (acceso libre dentro de la red corporativa).
+- **Chat y salud**: públicos (el chat tiene anti-bot Turnstile opcional + rate
+  limit; ver [`websocket.md`](websocket.md)).
+- **Admin (`/api/v1/admin/*`)**: requiere **sesión autenticada**. Flujo:
+  email+password (bcrypt) → **Cloudflare Turnstile** → **TOTP 2FA** → **JWT
+  (iss/aud) en cookie httponly+secure**. El cliente envía la cookie con
+  `credentials: 'include'` (no hay token en JS). Login/2FA con rate limit +
+  lockout. Endpoints de auth → [`endpoints.md`](endpoints.md).
 
 ## Formato
 

@@ -12,7 +12,7 @@ mindmap
       SQLAlchemy
       Alembic
     Frontend
-      Next.js 15
+      Next.js 16
       TypeScript
       React 19
       Vanilla CSS
@@ -76,16 +76,19 @@ mindmap
 |------------|-----------|--------|-------------|
 | **Embeddings** | Cohere | embed-multilingual-v3.0 | 1024 |
 | **Reranking** | Cohere | rerank-multilingual-v3.0 | N/A |
-| **LLM (default)** | OpenAI | gpt-4o-mini | N/A |
-| **LLM (alt 1)** | Google | gemini-2.5-flash | N/A |
-| **LLM (alt 2)** | Anthropic | claude-4-sonnet | N/A |
+| **LLM (activo)** | Google | gemini-2.5-flash | N/A |
+| **LLM (fallback)** | OpenAI | gpt-4o-mini | N/A |
+| **LLM (fallback)** | Anthropic | claude-4-sonnet | N/A |
 | **LLM (local)** | Ollama | llama3.1:8b | N/A |
+
+> Proveedor activo `LLM_PROVIDER=gemini` (`gemini-2.5-flash`); el resto entra por
+> la cadena de fallback. Detalle → [`llm-providers.md`](llm-providers.md).
 
 ### Frontend (TypeScript)
 
 | Categoría | Tecnología | Versión | Propósito |
 |-----------|-----------|---------|-----------|
-| **Framework** | Next.js | 15 | App Router, SSR, CSR |
+| **Framework** | Next.js | 16 | App Router, SSR, CSR |
 | **UI Library** | React | 19 | Componentes declarativos |
 | **Lenguaje** | TypeScript | ≥5.5 | Tipado estático |
 | **Estilos** | Vanilla CSS | N/A | CSS Variables, sin framework |
@@ -122,12 +125,16 @@ mindmap
 
 | Categoría | Tecnología | Propósito |
 |-----------|-----------|-----------|
-| **Unit/Integration** | pytest | Tests del backend |
+| **Unit/Integration (backend)** | pytest | Tests del backend (en imagen `test` de Podman) |
 | **Async** | pytest-asyncio | Tests async |
 | **Coverage** | pytest-cov | Cobertura de código |
-| **E2E** | Scripts custom (Python) | Flujo completo |
+| **Unit (frontend)** | Vitest | Helper de API (`apiFetch`) |
+| **E2E** | Validación manual en staging | Flujo completo con túnel |
 | **Linting** | Ruff | Linting + formatting |
 | **Type check** | mypy | Verificación de tipos |
+
+> Política: tests/lint **siempre en contenedores**, nunca en local. Detalle →
+> [`../development/testing-strategy.md`](../development/testing-strategy.md).
 
 ## Justificación de Decisiones Clave
 

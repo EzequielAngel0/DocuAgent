@@ -153,7 +153,7 @@ sequenceDiagram
     participant QD as Qdrant
     participant PG as PostgreSQL
 
-    U->>API: POST /api/v1/documents (upload)
+    U->>API: POST /api/v1/admin/documents/upload
     API->>FS: Guardar archivo original
     API->>PG: Crear registro de documento (metadatos)
     API->>EX: Extraer texto según formato
@@ -180,7 +180,7 @@ sequenceDiagram
     participant LS as LangSmith
 
     C->>FE: Escribe pregunta
-    FE->>API: POST /api/v1/chat (WebSocket)
+    FE->>API: WS /api/v1/chat/ws (mensaje JSON)
     API->>AG: Ejecutar grafo
     AG->>LS: Trace: inicio de ejecución
     AG->>CE: Embedding de la pregunta

@@ -2,6 +2,15 @@
 
 Índice completo de la documentación del proyecto.
 
+> **Estado (2026-06-29)**: backend con arquitectura completa (FastAPI + LangGraph
+> + multi-LLM con fallback + RAG/ingesta) y frontend conectado a endpoints reales.
+> **Staging** validado end-to-end en `dev.angelezequiel.dev` (Podman + túnel).
+> **OCI** aún sin provisionar: deploy automatizado pero **inactivo**
+> (gateado por `vars.DEPLOY_ENABLED`); infra como código lista en
+> [`infra/terraform/`](../infra/terraform/). Qué falta →
+> [`project/pendientes.md`](project/pendientes.md) y
+> [`deployment/oci-go-live.md`](deployment/oci-go-live.md).
+
 ## 📁 Estructura
 
 ```
@@ -13,6 +22,7 @@ docs/
 │   ├── phases.md                      # Fases y cronograma (deadline: 20 jul)
 │   ├── decisions-log.md               # Registro de decisiones técnicas (ADR)
 │   ├── infrastructure-and-quality-plan.md # Plan de infraestructura, calidad y gobernanza
+│   ├── pendientes.md                  # Pendientes para completar el proyecto
 │   └── glossary.md                    # Glosario de términos
 │
 ├── architecture/                      # 🏗️ Arquitectura del sistema
@@ -40,8 +50,9 @@ docs/
 │   └── websocket.md                   # Protocolo WebSocket (chat streaming)
 │
 ├── deployment/                        # 🚀 Despliegue
-│   ├── containerfiles.md              # Containerfiles + compose (dev/prod)
+│   ├── containerfiles.md              # Containerfiles + compose (base/dev/prod)
 │   ├── staging-runbook.md             # Levantar staging local (Podman + tunnel)
+│   ├── oci-terraform.md               # Infra OCI como código (resumen + infra/terraform/)
 │   ├── oci-setup.md                   # Deploy en Oracle Cloud (paso a paso)
 │   ├── oci-go-live.md                 # Checklist: qué falta para subir a OCI
 │   └── ci-cd.md                       # GitHub Actions (CI + build + deploy)
@@ -77,9 +88,10 @@ docs/
 1. Local: [`development/local-setup.md`](development/local-setup.md)
 2. Contenedores: [`deployment/containerfiles.md`](deployment/containerfiles.md)
 3. Staging (local + tunnel): [`deployment/staging-runbook.md`](deployment/staging-runbook.md)
-4. OCI paso a paso: [`deployment/oci-setup.md`](deployment/oci-setup.md)
-5. Checklist go-live OCI: [`deployment/oci-go-live.md`](deployment/oci-go-live.md)
-6. CI/CD: [`deployment/ci-cd.md`](deployment/ci-cd.md)
+4. Infra OCI (Terraform): [`deployment/oci-terraform.md`](deployment/oci-terraform.md) → módulo en [`infra/terraform/`](../infra/terraform/)
+5. OCI paso a paso: [`deployment/oci-setup.md`](deployment/oci-setup.md)
+6. Checklist go-live OCI: [`deployment/oci-go-live.md`](deployment/oci-go-live.md)
+7. CI/CD: [`deployment/ci-cd.md`](deployment/ci-cd.md)
 
 ### Quiero entender la seguridad
 1. [`architecture/security.md`](architecture/security.md) — diseño: prompt injection, API, BD, contenedores, red
