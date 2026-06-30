@@ -2568,6 +2568,16 @@ code, pre {
   color: #9bbf86;
 }
 
+.chat-turnstile {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-sm);
+}
+
+.chat-turnstile:empty {
+  display: none;
+}
+
 
 /* HISTORIAL DETALLES */
 .detail-field {

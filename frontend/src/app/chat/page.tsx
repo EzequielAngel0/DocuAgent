@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import ChatArea from "@/components/chat/ChatArea";
 import { Message } from "@/components/chat/MessageItem";
@@ -17,6 +17,44 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  // Token de Turnstile (en ref para evitar closures obsoletos al enviar).
+  const turnstileTokenRef = useRef("");
+
+  // Cargar Turnstile (anti-bot) y capturar el token; el backend lo verifica una
+  // vez por IP. Si no hay site key, no se renderiza (queda sin protección).
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+    if (!key) return;
+
+    (window as any).onloadChatTurnstile = () => {
+      const ts = (window as any).turnstile;
+      const el = document.getElementById("chat-turnstile");
+      if (ts && el) {
+        ts.render("#chat-turnstile", {
+          sitekey: key,
+          theme: "dark",
+          callback: (token: string) => {
+            turnstileTokenRef.current = token;
+          },
+          "expired-callback": () => {
+            turnstileTokenRef.current = "";
+          },
+        });
+      }
+    };
+
+    const script = document.createElement("script");
+    script.src =
+      "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadChatTurnstile";
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+
+    return () => {
+      if (document.head.contains(script)) document.head.removeChild(script);
+      delete (window as any).onloadChatTurnstile;
+    };
+  }, []);
 
   // 1. Cargar sesiones iniciales de localStorage al montar
   useEffect(() => {
@@ -144,7 +182,9 @@ export default function ChatPage() {
       ws.onopen = () => {
         wsConnected = true;
         clearTimeout(connectTimeout);
-        ws?.send(JSON.stringify({ query: messageText }));
+        ws?.send(
+          JSON.stringify({ query: messageText, turnstile_token: turnstileTokenRef.current })
+        );
         // El mensaje del asistente se crea al llegar el primer token; mientras
         // tanto solo se muestra el indicador de "escribiendo" (isTyping).
       };

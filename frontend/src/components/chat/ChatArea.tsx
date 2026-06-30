@@ -125,6 +125,7 @@ export default function ChatArea({
 
       {/* INPUT FORM */}
       <div className="chat-input-wrapper">
+        <div id="chat-turnstile" className="chat-turnstile" />
         <form onSubmit={handleSubmit} className="chat-input-form">
           <input
             type="text"
