@@ -50,9 +50,14 @@ class TestContextBuilder:
 
 
 class TestValidator:
-    def test_respuesta_vacia_va_a_fallback(self):
-        out = validator({"response": "   "})
-        assert out["needs_fallback"] is True
+    def test_respuesta_vacia_reintenta_y_luego_fallback(self):
+        # Primera vez con respuesta vacía: pide re-generar (no cae al fallback aún).
+        out1 = validator({"response": "   "})
+        assert out1.get("regenerate") is True
+        assert out1["needs_fallback"] is False
+        # Si ya se re-generó y sigue vacía: ahora sí fallback.
+        out2 = validator({"response": "   ", "regenerated": True})
+        assert out2["needs_fallback"] is True
 
     def test_admite_no_tener_informacion(self):
         out = validator({"response": "Lo siento, no tengo información en los documentos."})

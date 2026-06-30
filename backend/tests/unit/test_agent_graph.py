@@ -71,6 +71,23 @@ async def test_run_agent_camino_feliz(monkeypatch, mock_rag):
 
 
 @pytest.mark.asyncio
+async def test_run_agent_regenera_una_vez_si_respuesta_vacia(monkeypatch, mock_rag):
+    calls = {"n": 0}
+
+    async def _gen(system, user):
+        calls["n"] += 1
+        return "", "fake"  # respuesta siempre vacía
+
+    monkeypatch.setattr(generator_module, "generate_with_fallback", _gen)
+
+    state = await run_agent("¿pregunta?", "RH")
+    # Generó una vez + reintentó una vez (exactamente 2), luego cae al fallback.
+    assert calls["n"] == 2
+    assert state["needs_fallback"] is True
+    assert state["response"]
+
+
+@pytest.mark.asyncio
 async def test_run_agent_sin_resultados_va_a_fallback(monkeypatch):
     monkeypatch.setattr(embeddings_mod, "embed_query", lambda q: [0.0] * 1024)
     monkeypatch.setattr(vector_store, "search", lambda **kwargs: [])
