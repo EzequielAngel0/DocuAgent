@@ -3,13 +3,14 @@
 Agente RAG conversacional para consulta de documentación empresarial.
 Proyecto Alura LATAM — deadline **20 de julio 2026**.
 
-> **Estado actual (2026-06-27)**: backend con la arquitectura completa
-> (FastAPI + LangGraph + multi-LLM con cadena de fallback + RAG/ingesta
-> modular) y frontend conectado a **endpoints reales**. **Staging** = Podman
-> local + Cloudflare Tunnel, listo para levantar. **OCI** aún SIN provisionar:
-> el deploy está automatizado y documentado, pero **inactivo** hasta crear la
-> instancia (workflow gateado por `vars.DEPLOY_ENABLED`). Qué falta para subir
-> a OCI → `docs/deployment/oci-go-live.md`. Cómo correr staging →
+> **Estado actual (2026-06-29)**: sistema **funcionando end-to-end en staging**
+> (`dev.angelezequiel.dev` vía túnel): chat RAG con citas (Cohere + Gemini
+> `gemini-2.5-flash`), panel admin (auth en cookie httponly, CRUD, subida con
+> drag&drop), ingesta/indexado reales. **OCI** aún SIN provisionar: el deploy
+> está automatizado y documentado pero **inactivo** hasta crear la instancia
+> (workflow gateado por `vars.DEPLOY_ENABLED`). Qué falta para completar el
+> proyecto → `docs/project/pendientes.md`. Subir a OCI →
+> `docs/deployment/oci-go-live.md`. Correr staging →
 > `docs/deployment/staging-runbook.md`.
 
 ## Orientación rápida
@@ -26,6 +27,7 @@ Antes de explorar archivos o hacer grep, consulta la doc relevante:
 - **API REST + WebSocket** → `docs/api/`
 - **Decisiones técnicas** → `docs/project/decisions-log.md`
 - **Fases y cronograma** → `docs/project/phases.md`
+- **Pendientes (qué falta para completar)** → `docs/project/pendientes.md`
 - **Branching y commits** → `docs/development/git-workflow.md`
 - **Setup local desde cero** → `docs/development/local-setup.md`
 - **Guía de ejecución fase a fase** → `docs/development/execution-guide.md`
