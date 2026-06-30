@@ -9,6 +9,13 @@ esta página es la lista de verificación de alto nivel.
 > Estado: **OCI sin provisionar**. El workflow `deploy.yml` está **inactivo**
 > hasta crear la variable de repositorio `DEPLOY_ENABLED=true`.
 
+> 🟢 **Despliegue de portafolio (recomendado aquí)**: una **sola VM** corre todo
+> el compose (backend + frontend + postgres + qdrant + cloudflared). NO necesitas
+> multi-VM, load balancer, IaC ni OCI Vault — eso es para apps de negocio. Con
+> eso, las secciones A/D se simplifican mucho: provisionas 1 VM, clonas el repo,
+> pones `.env.prod` y corres `./ops/docuagent.sh`. Detalle y decisiones:
+> `docs/project/pendientes.md`.
+
 ## A. Infraestructura OCI
 
 - [ ] **VM** (Ubuntu 24.04, Ampere/ARM o x86) con Podman + `podman-compose`.

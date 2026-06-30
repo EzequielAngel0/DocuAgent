@@ -9,16 +9,24 @@ Estado vivo de lo que falta. Lo ya hecho está en `CLAUDE.md` (sección
 > ingesta e indexado reales. Falta sobre todo **producción (OCI)**, pulido y
 > endurecimiento.
 
-## 🔴 Bloqueante para producción (OCI)
+## 🔴 Para subir a OCI (portafolio: UNA sola VM)
 
-- [ ] **Provisionar OCI**: VM Ubuntu + OCIR + red + block volume (no existe nada).
-- [ ] **IaC**: no hay Terraform/Ansible; hoy la provisión es manual
-      (`docs/deployment/oci-setup.md`).
-- [ ] **GitHub**: crear secrets/variables y `DEPLOY_ENABLED=true`
-      (`docs/deployment/oci-go-live.md`).
-- [ ] **Cloudflare prod**: túnel + 4 hostnames de producción.
-- [ ] **Llaves**: rotar las de staging; usar **OCI Vault**; conseguir una key de
-      **Gemini con cuota de pago** (la free tier limita a modelos concretos).
+> **Decisión del dueño**: es un proyecto de **portafolio**, no de negocio → se
+> despliega en **una sola VM** que corre todo el compose (sin multi-VM, sin load
+> balancer, sin IaC). Una instancia chica (p. ej. 1 OCPU / 6 GB) basta para este
+> proyecto. Otros proyectos irán en otras VMs (1, máx. 2 por VM según peso).
+
+- [ ] **Provisionar 1 VM** (Ubuntu 24.04) con Podman + podman-compose.
+- [ ] **OCIR** (2 repos) o, más simple para portafolio, **build en la propia VM**
+      (sin registro): `git pull` + `./ops/docuagent.sh` adaptado a build local.
+- [ ] **GitHub**: secrets/variables + `DEPLOY_ENABLED=true` (o deploy 100% manual).
+- [ ] **Cloudflare prod**: túnel + hostnames de producción.
+- [ ] `.env.prod` con valores (decisión: **mismos secretos que staging**; llave
+      Gemini **free-tier** se mantiene — es portafolio).
+- [ ] **Respaldos** del volumen de datos (`pgdata`, `qdrant_storage`, `uploads`).
+
+> **Ya NO aplica** (era para apps de negocio): IaC Terraform/Ansible, multi-VM,
+> load balancer, OCI Vault, llave de pago. Eso simplifica bastante el go-live.
 
 ## 🟠 Seguridad
 
@@ -32,6 +40,11 @@ Estado vivo de lo que falta. Lo ya hecho está en `CLAUDE.md` (sección
 
 ## 🟡 Producto / funcionalidad
 
+- [x] ~~Persistencia de uploads~~ — hecho (volumen `uploads` en compose; antes se
+      perdían los archivos al recrear el contenedor).
+- [x] ~~Control de costo del chat público~~ — hecho: **tope global/hora** +
+      **Turnstile** en el chat (flag `CHAT_REQUIRE_TURNSTILE`) + rate limit por IP.
+- [x] ~~Healthcheck del frontend~~ — hecho (compose).
 - [ ] **Historial de chat por usuario en backend**: hoy las conversaciones del
       chat viven solo en `localStorage` del navegador (el backend solo guarda
       `audit_logs` por consulta). Falta tabla de sesiones/mensajes si se quiere
