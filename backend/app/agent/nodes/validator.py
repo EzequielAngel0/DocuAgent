@@ -19,6 +19,9 @@ _NO_INFO_MARKERS = (
 def validator(state: AgentState) -> dict:
     response = (state.get("response") or "").strip()
     if not response:
+        # Respuesta vacía (posible fallo transitorio): reintentar una vez.
+        if not state.get("regenerated"):
+            return {"regenerate": True, "needs_fallback": False}
         return {"needs_fallback": True, "response": FALLBACK_MESSAGE}
 
     lowered = response.lower()
@@ -26,4 +29,4 @@ def validator(state: AgentState) -> dict:
         # El modelo admitió no tener la información: respeta esa honestidad.
         return {"needs_fallback": True, "sources": [], "confidence": 0.0}
 
-    return {"needs_fallback": False}
+    return {"needs_fallback": False, "regenerate": False}

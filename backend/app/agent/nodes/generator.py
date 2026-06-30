@@ -8,4 +8,10 @@ from app.providers import generate_with_fallback
 async def generator(state: AgentState) -> dict:
     system_prompt = build_system_prompt(state["context"])
     text, provider = await generate_with_fallback(system_prompt, state["query"])
-    return {"response": text, "provider_used": provider}
+    return {
+        "response": text,
+        "provider_used": provider,
+        # Si esta ejecución vino de una re-generación, márcalo para no repetir.
+        "regenerated": state.get("regenerate", False) or state.get("regenerated", False),
+        "regenerate": False,
+    }

@@ -26,3 +26,5 @@ class AgentState(TypedDict, total=False):
 
     # Control de flujo
     needs_fallback: bool
+    regenerate: bool  # señal transitoria: reintentar la generación una vez
+    regenerated: bool  # ya se reintentó (evita bucles infinitos)

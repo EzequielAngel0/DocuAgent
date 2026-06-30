@@ -34,6 +34,8 @@ def _route_after_context(state: AgentState) -> str:
 
 
 def _route_after_validator(state: AgentState) -> str:
+    if state.get("regenerate"):
+        return "generator"  # reintentar la generación una sola vez
     return "fallback" if state.get("needs_fallback") else "end"
 
 
@@ -66,7 +68,7 @@ def build_agent_graph():
     graph.add_conditional_edges(
         "validator",
         _route_after_validator,
-        {"end": END, "fallback": "fallback"},
+        {"end": END, "fallback": "fallback", "generator": "generator"},
     )
     graph.add_edge("fallback", END)
 
