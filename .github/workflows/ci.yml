@@ -88,6 +88,9 @@ jobs:
       - name: Lint (eslint)
         run: npm run lint
 
+      - name: Tests (vitest)
+        run: npm run test
+
       - name: Build
         env:
           NEXT_PUBLIC_API_URL: https://api-docuagent.angelezequiel.dev/api/v1
