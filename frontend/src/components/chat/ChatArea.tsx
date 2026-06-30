@@ -35,11 +35,13 @@ export default function ChatArea({
     onSendMessage();
   };
 
+  // Ejemplos genéricos de TEMAS de documentos (no afirman saber nada del propio
+  // proyecto: el agente solo responde a partir de los documentos cargados).
   const suggestedQuestions = [
     { text: "¿Cuál es la política de vacaciones?", label: "Recursos Humanos" },
     { text: "¿Cómo solicito un reembolso de gastos?", label: "Finanzas" },
-    { text: "¿Cuáles son las medidas de seguridad del proyecto?", label: "Seguridad" },
-    { text: "¿Qué formatos de documentos son soportados?", label: "General" },
+    { text: "¿Cuál es el procedimiento ante un incidente?", label: "Seguridad" },
+    { text: "Resume el reglamento interno de trabajo", label: "General" },
   ];
 
   return (

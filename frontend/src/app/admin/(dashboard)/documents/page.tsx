@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Upload, Trash2, RotateCw, FileText, ChevronRight, CheckCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import Notice, { NoticeKind } from "@/components/admin/Notice";
 
 interface Document {
   id: string;
@@ -26,6 +28,9 @@ export default function AdminDocumentsPage() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [reindexingId, setReindexingId] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryData[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [docToDelete, setDocToDelete] = useState<Document | null>(null);
+  const [notice, setNotice] = useState<{ kind: NoticeKind; message: string } | null>(null);
 
   // 1. Cargar datos iniciales del backend (documentos y categorías reales)
   useEffect(() => {
@@ -79,6 +84,23 @@ export default function AdminDocumentsPage() {
     }
   };
 
+  // --- Drag & drop ---
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setUploadFile(e.dataTransfer.files[0]);
+    }
+  };
+
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadFile) return;
@@ -97,7 +119,8 @@ export default function AdminDocumentsPage() {
 
       setUploadProgress(80);
       if (!res.ok) {
-        throw new Error("No se pudo cargar el documento.");
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || "No se pudo cargar el documento.");
       }
 
       const newDoc = await res.json();
@@ -109,25 +132,26 @@ export default function AdminDocumentsPage() {
       setTimeout(() => setUploadProgress(null), 800);
     } catch (err: any) {
       console.error(err);
-      alert("Error al subir archivo: " + err.message);
+      setNotice({ kind: "error", message: "Error al subir el archivo: " + err.message });
       setUploadProgress(null);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar este documento y todos sus vectores indexados en Qdrant?")) return;
-
+  const performDelete = async () => {
+    if (!docToDelete) return;
+    const id = docToDelete.id;
+    setDocToDelete(null);
     try {
-      const res = await apiFetch(`/admin/documents/${id}`, {
-        method: "DELETE"
-      });
+      const res = await apiFetch(`/admin/documents/${id}`, { method: "DELETE" });
       if (res.ok) {
         setDocuments((prev) => prev.filter((doc) => doc.id !== id));
+        setNotice({ kind: "success", message: "Documento eliminado." });
       } else {
-        alert("No se pudo eliminar el documento.");
+        setNotice({ kind: "error", message: "No se pudo eliminar el documento." });
       }
     } catch (err) {
       console.error("Error al eliminar documento:", err);
+      setNotice({ kind: "error", message: "Error de conexión al eliminar el documento." });
     }
   };
 
@@ -178,6 +202,10 @@ export default function AdminDocumentsPage() {
         <p className="section-desc">Sube y gestiona los archivos fuente que alimentan la base de conocimiento RAG.</p>
       </div>
 
+      {notice && (
+        <Notice kind={notice.kind} message={notice.message} onClose={() => setNotice(null)} />
+      )}
+
       <div className="admin-grid-2col">
         {/* DRAG & DROP / SUBIR */}
         <div className="card admin-card">
@@ -201,7 +229,12 @@ export default function AdminDocumentsPage() {
 
               <div className="form-group">
                 <label className="form-label">Seleccionar Archivo</label>
-                <div className="file-drop-zone">
+                <div
+                  className={`file-drop-zone ${isDragging ? "dragging" : ""}`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
                   <Upload size={32} className="icon-terracotta" style={{ marginBottom: "var(--space-sm)" }} />
                   <input
                     type="file"
@@ -308,7 +341,7 @@ export default function AdminDocumentsPage() {
                             </button>
                             <button
                               className="btn btn-action danger"
-                              onClick={() => handleDelete(doc.id)}
+                              onClick={() => setDocToDelete(doc)}
                               disabled={doc.status === "Indexando"}
                               title="Eliminar de RAG"
                             >
@@ -325,6 +358,16 @@ export default function AdminDocumentsPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!docToDelete}
+        title="Eliminar documento"
+        message={`Se eliminará "${docToDelete?.name}" y todos sus vectores indexados en Qdrant. Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={performDelete}
+        onCancel={() => setDocToDelete(null)}
+      />
     </div>
   );
 }

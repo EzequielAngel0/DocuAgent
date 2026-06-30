@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { FolderPlus, Trash2, Edit2, Folder, Users, Shield, CircleDollarSign, Plus, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import Notice, { NoticeKind } from "@/components/admin/Notice";
 
 interface Category {
   id: string;
@@ -22,6 +24,8 @@ export default function AdminCategoriesPage() {
   const [formName, setFormName] = useState("");
   const [formColor, setFormColor] = useState("terracotta");
   const [formIcon, setFormIcon] = useState("Folder");
+  const [catToDelete, setCatToDelete] = useState<Category | null>(null);
+  const [notice, setNotice] = useState<{ kind: NoticeKind; message: string } | null>(null);
 
   // Cargar categorías y documentos para calcular conteos
   const loadCategories = async () => {
@@ -70,20 +74,21 @@ export default function AdminCategoriesPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar esta categoría? Se borrarán sus documentos asociados.")) return;
-
+  const performDelete = async () => {
+    if (!catToDelete) return;
+    const id = catToDelete.id;
+    setCatToDelete(null);
     try {
-      const res = await apiFetch(`/admin/categories/${id}`, {
-        method: "DELETE"
-      });
+      const res = await apiFetch(`/admin/categories/${id}`, { method: "DELETE" });
       if (res.ok) {
         setCategories((prev) => prev.filter((c) => c.id !== id));
+        setNotice({ kind: "success", message: "Categoría eliminada." });
       } else {
-        alert("No se pudo eliminar la categoría.");
+        setNotice({ kind: "error", message: "No se pudo eliminar la categoría." });
       }
     } catch (err) {
       console.error(err);
+      setNotice({ kind: "error", message: "Error de conexión al eliminar la categoría." });
     }
   };
 
@@ -173,6 +178,10 @@ export default function AdminCategoriesPage() {
         </button>
       </div>
 
+      {notice && (
+        <Notice kind={notice.kind} message={notice.message} onClose={() => setNotice(null)} />
+      )}
+
       {/* GRID DE CATEGORIAS */}
       <div className="categories-grid" style={{ marginTop: "var(--space-md)" }}>
         {categories.map((cat) => {
@@ -191,7 +200,7 @@ export default function AdminCategoriesPage() {
                     <button className="btn btn-action" onClick={() => handleOpenEditModal(cat)} title="Editar categoría">
                       <Edit2 size={12} />
                     </button>
-                    <button className="btn btn-action danger" onClick={() => handleDelete(cat.id)} title="Eliminar categoría">
+                    <button className="btn btn-action danger" onClick={() => setCatToDelete(cat)} title="Eliminar categoría">
                       <Trash2 size={12} />
                     </button>
                   </div>
@@ -201,7 +210,9 @@ export default function AdminCategoriesPage() {
                 </div>
               </div>
               <div className="category-card-footer flex items-center justify-between">
-                <span className="category-docs-count">{cat.docsCount} documentos</span>
+                <span className="category-docs-count">
+                  {cat.docsCount} {cat.docsCount === 1 ? "documento" : "documentos"}
+                </span>
                 <span className={`category-color-dot ${cat.color}`}></span>
               </div>
             </div>
@@ -267,6 +278,16 @@ export default function AdminCategoriesPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!catToDelete}
+        title="Eliminar categoría"
+        message={`Se eliminará "${catToDelete?.name}" y todos sus documentos asociados. Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={performDelete}
+        onCancel={() => setCatToDelete(null)}
+      />
     </div>
   );
 }

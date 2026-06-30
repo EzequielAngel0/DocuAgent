@@ -98,8 +98,7 @@ export default function ChunksPage({
               </span>
               <div className="chunk-metadata flex gap-sm">
                 <span className="chunk-meta-tag">{chunk.metadata.page}</span>
-                <span className="chunk-meta-tag">{chunk.metadata.language.toUpperCase()}</span>
-                <span className="chunk-meta-tag">{chunk.tokens} tokens</span>
+                <span className="chunk-meta-tag">~{chunk.tokens} tokens</span>
               </div>
             </div>
 
@@ -113,7 +112,7 @@ export default function ChunksPage({
                   <Database size={12} style={{ marginRight: "4px" }} />
                   Vector Embedding
                 </span>
-                <span className="vector-dimension">1536 dim</span>
+                <span className="vector-dimension">1024 dim</span>
               </div>
               <code className="vector-snippet">{chunk.vectorSnippet}</code>
             </div>
