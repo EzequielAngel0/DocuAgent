@@ -36,6 +36,7 @@ cat <<EOF
     logs      Sigue los logs (Ctrl-C para salir; args: nombre de servicio)
     ps        Estado de los contenedores
     migrate   Aplica migraciones de BD pendientes
+    seed      Indexa los documentos de ejemplo (backend/documents) en Qdrant+BD
     clean     down + elimina volumenes e imagenes locales
     prune     Limpieza profunda
     env       Muestra la configuracion activa
@@ -147,6 +148,11 @@ case "$ACTION" in
   migrate)
     echo "[migrate] Aplicando migraciones..."
     compose run --rm backend alembic upgrade head
+    ;;
+
+  seed)
+    echo "[seed] Indexando documentos de ejemplo (backend/documents)..."
+    compose run --rm backend python -m app.scripts.seed_documents
     ;;
 
   logs)
