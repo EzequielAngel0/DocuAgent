@@ -213,6 +213,10 @@ class Settings(BaseSettings):
                 insecure.append("JWT_SECRET_KEY")
             if self.ADMIN_PASSWORD in ("", "admin", "change_me_admin"):
                 insecure.append("ADMIN_PASSWORD")
+            # El default de ADMIN_TOTP_SECRET está en el repo público: si llega a
+            # producción, el 2FA es trivialmente evadible. Rechazarlo al arrancar.
+            if self.ADMIN_TOTP_SECRET in ("", "JBSWY3DPEHPK3PXP"):
+                insecure.append("ADMIN_TOTP_SECRET")
             if not self.COHERE_API_KEY:
                 insecure.append("COHERE_API_KEY")
             if not self.CORS_ALLOWED_ORIGINS:
