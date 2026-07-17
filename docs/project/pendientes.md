@@ -58,7 +58,15 @@ Estado vivo de lo que falta. Lo ya hecho está en `CLAUDE.md` (sección
       antes de caer al fallback; guarda anti-bucle).
 - [~] **Página `setup-2fa`**: se deja **así por diseño** — el TOTP se siembra por
       `.env`, evitando una superficie de ataque extra (decisión del dueño).
-- [ ] Seed de **documentos reales** de la empresa.
+- [x] ~~Documentos de ejemplo para el seed~~ — hecho: `backend/documents/`
+      (empresa ficticia "Corporativo Nébula", 4 categorías) + acción
+      `./ops/docuagent.sh seed`. Falta seed de **documentos reales** de la empresa.
+- [x] ~~Batería de prueba del RAG~~ — hecho: `docs/development/prueba-rag-preguntas.md`
+      (10 preguntas cubriendo éxito, multilingüe, fallback, off-topic, inyección).
+- [ ] **Capturas de pantalla** de staging para el README/showcase (destino en
+      `docs/assets/screenshots/`; se toman a mano con el stack arriba + login).
+- [ ] **Legales**: revisar y completar los borradores `docs/legal/` (aviso de
+      privacidad y T&C) con razón social, contacto y jurisdicción reales.
 
 ## 🟢 Calidad / DX / frontend
 

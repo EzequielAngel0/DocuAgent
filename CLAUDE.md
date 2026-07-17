@@ -34,6 +34,10 @@ Antes de explorar archivos o hacer grep, consulta la doc relevante:
 - **Setup local desde cero** → `docs/development/local-setup.md`
 - **Guía de ejecución fase a fase** → `docs/development/execution-guide.md`
 - **Testing (unit, integration, e2e)** → `docs/development/testing-strategy.md`
+- **Prueba de humo del RAG (10 preguntas)** → `docs/development/prueba-rag-preguntas.md`
+- **Documentos de ejemplo (seed)** → `backend/documents/` (empresa ficticia)
+- **Legales (borradores)** → `docs/legal/` (aviso de privacidad, T&C)
+- **Capturas de staging** → `docs/assets/screenshots/` (ver README de la carpeta)
 - **Contenedores y compose** → `docs/deployment/containerfiles.md`
 - **CI/CD (GitHub Actions)** → `docs/deployment/ci-cd.md`
 - **Deploy OCI paso a paso** → `docs/deployment/oci-setup.md`

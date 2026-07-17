@@ -60,15 +60,24 @@ docs/
 ├── development/                       # 👨‍💻 Desarrollo
 │   ├── local-setup.md                 # Setup local desde cero
 │   ├── git-workflow.md                # Branches, commits, PRs
-│   └── testing-strategy.md            # Unit, integration, E2E
+│   ├── testing-strategy.md            # Unit, integration, E2E
+│   └── prueba-rag-preguntas.md        # 10 preguntas de humo (todas las salidas del RAG)
+│
+├── legal/                             # ⚖️ Legales (borradores)
+│   ├── aviso-de-privacidad.md         # Aviso de privacidad (plantilla)
+│   └── terminos-y-condiciones.md      # Términos y condiciones (plantilla)
 │
 ├── private/                           # 🔒 Doc sensible (NO en git)
 │   └── domain-setup.md               # Dominio, Cloudflare Tunnel, tokens
 │
 └── assets/                            # 🎨 Recursos visuales
     ├── diagrams/                      # Diagramas de arquitectura
-    └── screenshots/                   # Capturas del agente funcionando
+    └── screenshots/                   # Capturas del agente (ver README de la carpeta)
 ```
+
+> Despliegue temporal en la VM del ACP (fuera de `docs/`, en la raíz):
+> [`../DEPLOY-VM-ACP.md`](../DEPLOY-VM-ACP.md). Documentos de ejemplo para el
+> seed del RAG: [`../backend/documents/`](../backend/documents/).
 
 ## 🧭 Navegación Rápida
 
