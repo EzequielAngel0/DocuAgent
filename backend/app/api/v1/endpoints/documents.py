@@ -86,7 +86,10 @@ async def _save_upload(file: UploadFile, dest_path: str, max_bytes: int) -> None
 
 
 @router.get("/documents", response_model=list[DocumentResponse])
-async def list_documents(db: AsyncSession = Depends(get_db)):
+async def list_documents(
+    db: AsyncSession = Depends(get_db),
+    current_user: AdminUser = Depends(get_current_user),
+):
     result = await db.execute(select(Document).order_by(Document.uploaded_at.desc()))
     return result.scalars().all()
 
