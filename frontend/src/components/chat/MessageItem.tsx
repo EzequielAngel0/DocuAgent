@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThumbsUp, ThumbsDown, Bot, User } from "lucide-react";
 import SourceCitations, { Citation } from "./SourceCitations";
 
@@ -20,6 +20,13 @@ export default function MessageItem({ message }: MessageItemProps) {
   const [feedback, setFeedback] = useState<"positive" | "negative" | null>(null);
 
   const isAssistant = message.sender === "assistant";
+
+  // Restaurar el feedback guardado: el pulgar debe persistir al recargar la
+  // página o cambiar de sesión (antes se reiniciaba porque vivía solo en estado).
+  useEffect(() => {
+    const saved = localStorage.getItem(`chat_feedback_${message.id}`);
+    if (saved === "positive" || saved === "negative") setFeedback(saved);
+  }, [message.id]);
 
   // Formateador simple de texto con soporte básico de markdown (**bold**, - list)
   const formatMessageText = (txt: string) => {
@@ -65,8 +72,14 @@ export default function MessageItem({ message }: MessageItemProps) {
   };
 
   const handleFeedback = async (type: "positive" | "negative") => {
-    const nextFeedback = feedback === type ? "none" : type;
-    setFeedback(feedback === type ? null : type);
+    const isToggleOff = feedback === type;
+    const nextState = isToggleOff ? null : type;
+    const nextFeedback = isToggleOff ? "none" : type;
+    setFeedback(nextState);
+
+    // Persistir localmente para que el pulgar se mantenga.
+    if (nextState) localStorage.setItem(`chat_feedback_${message.id}`, nextState);
+    else localStorage.removeItem(`chat_feedback_${message.id}`);
 
     if (message.logId) {
       try {
