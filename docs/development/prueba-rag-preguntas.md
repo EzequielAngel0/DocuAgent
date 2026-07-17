@@ -83,9 +83,9 @@ system prompt.
 
 ## Rutas de error operativas
 
-- **Anti-bot**: con `CHAT_REQUIRE_TURNSTILE=true`, el **gate de Turnstile**
-  aparece **antes** de entrar al chat; al verificar, desaparece. Si no aparece o
-  rechaza: revisar pairing site/secret y hostname del widget (`DEPLOY-VM-ACP.md`).
+- **Anti-bot**: con `CHAT_REQUIRE_TURNSTILE=true`, el widget de Turnstile se
+  muestra en el pie del sidebar y verifica la IP una vez. Si no aparece o
+  rechaza: revisar el pairing site/secret y el hostname del widget en Cloudflare.
 - **Rate limit**: superar `RATE_LIMIT_CHAT_PER_MIN` (20/min por IP) o el tope
   global (500/h) devuelve un aviso, no un 500.
 - **Proveedor LLM caído**: la cadena `gemini→openai→anthropic→ollama` toma el

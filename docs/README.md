@@ -75,9 +75,8 @@ docs/
     └── screenshots/                   # Capturas del agente (ver README de la carpeta)
 ```
 
-> Despliegue temporal en la VM del ACP (fuera de `docs/`, en la raíz):
-> [`../DEPLOY-VM-ACP.md`](../DEPLOY-VM-ACP.md). Documentos de ejemplo para el
-> seed del RAG: [`../backend/documents/`](../backend/documents/).
+> Documentos de ejemplo para el seed del RAG:
+> [`../backend/documents/`](../backend/documents/).
 
 ## 🧭 Navegación Rápida
 

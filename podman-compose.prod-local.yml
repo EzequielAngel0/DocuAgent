@@ -4,7 +4,7 @@ version: "3.8"
 # Se aplica ENCIMA de base + prod cuando `.env.prod` tiene DEPLOY_MODE=local:
 # restaura el build que podman-compose.prod.yml anula (imagenes de OCIR),
 # para construir en la propia VM sin necesidad de registro de contenedores.
-# Guia de uso completa: DEPLOY-VM-ACP.md (raiz del repo).
+# Modo build local: DEPLOY_MODE=local en .env.prod (lo aplica ops/docuagent.sh).
 
 services:
   backend:

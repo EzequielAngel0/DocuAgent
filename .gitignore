@@ -45,6 +45,9 @@ out/
 # Documentacion sensible (dominio, tokens, tunnels)
 docs/private/
 
+# Guia de despliegue temporal en la VM del ACP (detalles internos, no en repo)
+DEPLOY-VM-ACP.md
+
 # Cloudflare tunnel
 cloudflared/
 *.json

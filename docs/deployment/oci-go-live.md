@@ -18,8 +18,7 @@ esta página es la lista de verificación de alto nivel.
 >
 > **Sin OCIR**: con `DEPLOY_MODE=local` en `.env.prod` el runner construye las
 > imágenes en la propia VM (`podman-compose.prod-local.yml`) — las secciones
-> A (OCIR) y D (GitHub Actions) dejan de ser necesarias. Guía paso a paso para
-> la VM temporal del ACP: `DEPLOY-VM-ACP.md` (raíz del repo).
+> A (OCIR) y D (GitHub Actions) dejan de ser necesarias.
 
 ## A. Infraestructura OCI
 

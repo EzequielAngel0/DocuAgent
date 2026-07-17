@@ -10,9 +10,7 @@ Proyecto Alura LATAM — deadline **20 de julio 2026**.
 > está automatizado y documentado pero **inactivo** hasta crear la instancia
 > (workflow gateado por `vars.DEPLOY_ENABLED`). Qué falta para completar el
 > proyecto → `docs/project/pendientes.md`. Subir a OCI →
-> `docs/deployment/oci-go-live.md`. **Plan temporal (2026-07)**: desplegar en
-> una VM ARM existente del proyecto ACP con build en la propia VM
-> (`DEPLOY_MODE=local`) → guía en `DEPLOY-VM-ACP.md` (raíz). Correr staging →
+> `docs/deployment/oci-go-live.md`. Correr staging →
 > `docs/deployment/staging-runbook.md`.
 
 ## Orientación rápida
