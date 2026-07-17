@@ -32,6 +32,14 @@ export default function Footer() {
               <li><Link href="/docs">Documentación</Link></li>
             </ul>
           </div>
+
+          <div className="footer-links-group">
+            <h4 className="footer-links-title">Legal</h4>
+            <ul>
+              <li><a href="https://angelezequiel.dev/docuagent/privacidad" target="_blank" rel="noopener noreferrer">Aviso de Privacidad</a></li>
+              <li><a href="https://angelezequiel.dev/docuagent/terminos" target="_blank" rel="noopener noreferrer">Términos y Condiciones</a></li>
+            </ul>
+          </div>
         </div>
       </div>
 

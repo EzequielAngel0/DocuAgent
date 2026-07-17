@@ -67,7 +67,7 @@ export default function ChatArea({
         {messages.length === 0 ? (
           <div className="chat-empty-state slide-up">
             <div className="chat-empty-logo">
-              <img src="/logo-with-bg.svg" alt="DocuAgent Logo" width="64" height="64" />
+              <img src="/logo.svg" alt="DocuAgent Logo" width="64" height="64" />
             </div>
             <h3 className="chat-empty-title">Te damos la bienvenida a DocuAgent</h3>
             <p className="chat-empty-description">
@@ -150,7 +150,15 @@ export default function ChatArea({
           </button>
         </form>
         <p className="chat-input-disclaimer">
-          DocuAgent puede cometer errores. Verifica la información clave citada de los documentos oficiales.
+          DocuAgent puede cometer errores. Verifica la información clave citada de los documentos oficiales.{" "}
+          <a
+            href="https://angelezequiel.dev/docuagent/privacidad"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="chat-input-privacy-link"
+          >
+            Aviso de Privacidad
+          </a>
         </p>
       </div>
     </main>

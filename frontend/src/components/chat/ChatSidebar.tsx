@@ -85,6 +85,9 @@ export default function ChatSidebar({
       </div>
 
       <div className="chat-sidebar-footer">
+        {/* Turnstile discreto: se renderiza aquí (montado por la página de chat)
+            para que su re-verificación periódica no interrumpa la lectura/escritura. */}
+        <div id="chat-turnstile" className="chat-turnstile" />
         <div className="chat-sidebar-user">
           <div className="user-avatar">
             <Bot size={16} className="user-avatar-icon" />

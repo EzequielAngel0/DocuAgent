@@ -19,10 +19,6 @@ export default function ChatPage() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   // Token de Turnstile (en ref para evitar closures obsoletos al enviar).
   const turnstileTokenRef = useRef("");
-  // Gate anti-bot: se resuelve UNA vez antes de entrar al chat y desaparece.
-  // Sin site key configurada no hay gate (isVerified arranca en true).
-  const hasTurnstile = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-  const [isVerified, setIsVerified] = useState(!hasTurnstile);
 
   // Cargar Turnstile (anti-bot) y capturar el token; el backend lo verifica una
   // vez por IP. Si no hay site key, no se renderiza (queda sin protección).
@@ -36,14 +32,13 @@ export default function ChatPage() {
       if (ts && el) {
         ts.render("#chat-turnstile", {
           sitekey: key,
-          theme: "dark",
+          theme: "auto",
+          size: "compact", // Cabe en el sidebar sin desbordar.
           callback: (token: string) => {
             turnstileTokenRef.current = token;
-            setIsVerified(true); // Verificado: cerrar el gate y mostrar el chat.
           },
           "expired-callback": () => {
             turnstileTokenRef.current = "";
-            setIsVerified(false); // Token vencido: volver a mostrar el gate.
           },
         });
       }
@@ -258,18 +253,6 @@ export default function ChatPage() {
 
   return (
     <div className="flex" style={{ height: "100vh", overflow: "hidden" }}>
-      {hasTurnstile && !isVerified && (
-        <div className="turnstile-gate-overlay">
-          <div className="turnstile-gate-card">
-            <img src="/logo-with-bg.svg" alt="DocuAgent" width={56} height={56} />
-            <h2 className="turnstile-gate-title">Verificación de seguridad</h2>
-            <p className="turnstile-gate-text">
-              Confirma que no eres un robot para acceder al chat.
-            </p>
-            <div id="chat-turnstile" className="chat-turnstile" />
-          </div>
-        </div>
-      )}
       <ChatSidebar
         sessions={sessions}
         activeSessionId={activeSessionId}

@@ -2568,52 +2568,21 @@ code, pre {
   color: #9bbf86;
 }
 
+/* Widget de Turnstile: vive en el pie del sidebar, discreto y centrado. */
 .chat-turnstile {
   display: flex;
   justify-content: center;
+  margin-bottom: var(--space-sm);
 }
 
 .chat-turnstile:empty {
   display: none;
 }
 
-/* Gate anti-bot: overlay a pantalla completa ANTES de entrar al chat. */
-.turnstile-gate-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-md);
-  background-color: var(--bg-primary);
-}
-
-.turnstile-gate-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--space-sm);
-  width: 100%;
-  max-width: 380px;
-  padding: var(--space-xl);
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-}
-
-.turnstile-gate-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.turnstile-gate-text {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin-bottom: var(--space-sm);
+.chat-input-privacy-link {
+  color: var(--color-primary);
+  text-decoration: underline;
+  white-space: nowrap;
 }
 
 
