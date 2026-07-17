@@ -5,7 +5,9 @@
 # Uso:  ./ops/docuagent.sh <accion> [args...]
 #   accion: up | down | restart | pull | logs | ps | migrate | clean | prune | env | help
 #
-# Produccion en OCI: pull de imagenes desde OCIR (NO build local).
+# Produccion en OCI. Dos modos segun DEPLOY_MODE en .env.prod:
+#   (vacio/ocir)  pull de imagenes desde OCIR (deploy via GitHub Actions)
+#   local         build en la propia VM, sin registro (portafolio en 1 VM)
 # Desarrollo local se opera en Windows con: .\ops\docuagent.ps1 <accion>
 # ============================================================
 
@@ -14,6 +16,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_BASE="$ROOT/podman-compose.yml"
 COMPOSE_PROD="$ROOT/podman-compose.prod.yml"
+COMPOSE_PROD_LOCAL="$ROOT/podman-compose.prod-local.yml"
 ENV_FILE="$ROOT/.env.prod"
 ENV_EXAMPLE="$ROOT/.env.example"
 
@@ -25,10 +28,11 @@ cat <<EOF
   ./ops/docuagent.sh <accion> [args]
 
   Acciones:
-    up        Levanta el stack (pull de OCIR + up)
+    up        Levanta el stack (pull/build de imagenes + up)
     down      Detiene y elimina los contenedores
     restart   down + up
-    pull      Descarga las imagenes mas recientes de OCIR
+    pull      Actualiza imagenes: pull de OCIR o build local segun el modo
+    build     Alias de pull (natural en modo DEPLOY_MODE=local)
     logs      Sigue los logs (Ctrl-C para salir; args: nombre de servicio)
     ps        Estado de los contenedores
     migrate   Aplica migraciones de BD pendientes
@@ -38,6 +42,10 @@ cat <<EOF
     help      Esta ayuda
 
   Servicios: backend, frontend, postgres, qdrant, cloudflared
+
+  Modo (DEPLOY_MODE en .env.prod):
+    (vacio/ocir)  pull de imagenes desde OCIR
+    local         build en la propia VM (usa podman-compose.prod-local.yml)
 
 EOF
 }
@@ -59,8 +67,29 @@ if [ ! -f "$ENV_FILE" ]; then
   fi
 fi
 
+# --- Modo de despliegue ---
+# DEPLOY_MODE=local en .env.prod: build en la propia VM (sin OCIR).
+# Cualquier otro valor (o vacio): pull de imagenes desde OCIR.
+DEPLOY_MODE="$(sed -n 's/^DEPLOY_MODE=//p' "$ENV_FILE" | tr -d '\r' | tail -n 1)"
+
+COMPOSE_FILES=(-f "$COMPOSE_BASE" -f "$COMPOSE_PROD")
+if [ "$DEPLOY_MODE" = "local" ]; then
+  COMPOSE_FILES+=(-f "$COMPOSE_PROD_LOCAL")
+fi
+
 compose() {
-  ENV_FILE=".env.prod" $CMD compose -f "$COMPOSE_BASE" -f "$COMPOSE_PROD" --env-file "$ENV_FILE" "$@"
+  ENV_FILE=".env.prod" $CMD compose "${COMPOSE_FILES[@]}" --env-file "$ENV_FILE" "$@"
+}
+
+# Actualiza las imagenes de la app: pull (modo ocir) o build (modo local)
+fetch_images() {
+  if [ "$DEPLOY_MODE" = "local" ]; then
+    echo "[build] Construyendo imagenes en la VM (DEPLOY_MODE=local)..."
+    compose build
+  else
+    echo "[pull] Descargando imagenes desde OCIR..."
+    compose pull
+  fi
 }
 
 prune_light() {
@@ -78,21 +107,21 @@ case "$ACTION" in
 
   env)
     echo "Motor:    $CMD"
-    echo "Compose:  $COMPOSE_BASE + $COMPOSE_PROD"
+    echo "Modo:     ${DEPLOY_MODE:-ocir}"
+    echo "Compose:  ${COMPOSE_FILES[*]}"
     echo ".env:     $ENV_FILE"
     echo ""
     echo "Servicios:"
     compose config --services
     ;;
 
-  pull)
-    echo "[pull] Descargando imagenes desde OCIR..."
-    compose pull
+  pull|build)
+    fetch_images
     ;;
 
   up)
     echo "[up] Levantando stack de produccion..."
-    compose pull
+    fetch_images
     compose up -d
     prune_light
     echo ""
@@ -109,7 +138,7 @@ case "$ACTION" in
 
   restart)
     compose down
-    compose pull
+    fetch_images
     compose up -d
     prune_light
     echo "[restart] Listo."

@@ -15,6 +15,11 @@ esta página es la lista de verificación de alto nivel.
 > eso, las secciones A/D se simplifican mucho: provisionas 1 VM, clonas el repo,
 > pones `.env.prod` y corres `./ops/docuagent.sh`. Detalle y decisiones:
 > `docs/project/pendientes.md`.
+>
+> **Sin OCIR**: con `DEPLOY_MODE=local` en `.env.prod` el runner construye las
+> imágenes en la propia VM (`podman-compose.prod-local.yml`) — las secciones
+> A (OCIR) y D (GitHub Actions) dejan de ser necesarias. Guía paso a paso para
+> la VM temporal del ACP: `DEPLOY-VM-ACP.md` (raíz del repo).
 
 ## A. Infraestructura OCI
 

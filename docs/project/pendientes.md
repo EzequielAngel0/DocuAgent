@@ -17,8 +17,11 @@ Estado vivo de lo que falta. Lo ya hecho está en `CLAUDE.md` (sección
 > proyecto. Otros proyectos irán en otras VMs (1, máx. 2 por VM según peso).
 
 - [ ] **Provisionar 1 VM** (Ubuntu 24.04) con Podman + podman-compose.
-- [ ] **OCIR** (2 repos) o, más simple para portafolio, **build en la propia VM**
-      (sin registro): `git pull` + `./ops/docuagent.sh` adaptado a build local.
+      **Plan temporal (2026-07)**: reutilizar una instancia ARM existente del
+      proyecto ACP mientras dura la evaluación → guía en `DEPLOY-VM-ACP.md`
+      (raíz). NO terminar/recrear instancias ARM (out of capacity).
+- [x] ~~Runner adaptado a build local~~ — hecho: `DEPLOY_MODE=local` en
+      `.env.prod` + `podman-compose.prod-local.yml` (build en la VM, sin OCIR).
 - [ ] **GitHub**: secrets/variables + `DEPLOY_ENABLED=true` (o deploy 100% manual).
 - [ ] **Cloudflare prod**: túnel + hostnames de producción.
 - [ ] `.env.prod` con valores (decisión: **mismos secretos que staging**; llave
