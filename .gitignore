@@ -91,10 +91,8 @@ logs/
 # IDE y sistema operativo
 # ============================================================
 
-# VSCode (ignora todo el contenido salvo los 2 archivos compartidos del equipo)
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
+# VSCode (config local del editor, fuera del repo)
+.vscode/
 
 # JetBrains
 .idea/
