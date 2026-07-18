@@ -115,14 +115,10 @@ jobs:
           pip-audit -r backend/requirements.txt || true
 
       # Bloquea el build solo ante vulnerabilidades CRÍTICAS con fix disponible.
-      # token-setup-trivy: descarga autenticada del binario (el instalador
-      # fallaba de forma intermitente por límite de peticiones anónimas).
+      # Corre con la imagen oficial (ghcr, versión pineada) en lugar de
+      # trivy-action: el instalador de binario del action falla de forma
+      # determinista en los runners compartidos.
       - name: Trivy (vulnerabilidades del repositorio)
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          scan-type: fs
-          scan-ref: .
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-          token-setup-trivy: ${{ github.token }}
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" ghcr.io/aquasecurity/trivy:0.65.0 \
+            fs --severity CRITICAL --ignore-unfixed --exit-code 1 /repo
