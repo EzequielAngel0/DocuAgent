@@ -114,12 +114,10 @@ jobs:
           pip install pip-audit==2.7.3
           pip-audit -r backend/requirements.txt || true
 
-      # Informativo por ahora (no bloquea): el instalador de binario de
-      # trivy-action es inestable en CI (falla la descarga del binario, no por
-      # hallazgos). Reendurecer a bloqueante (quitar continue-on-error) cuando
-      # el action se estabilice o migrando a instalación directa con token.
+      # Bloquea el build solo ante vulnerabilidades CRÍTICAS con fix disponible.
+      # token-setup-trivy: descarga autenticada del binario (el instalador
+      # fallaba de forma intermitente por límite de peticiones anónimas).
       - name: Trivy (vulnerabilidades del repositorio)
-        continue-on-error: true
         uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: fs
@@ -127,3 +125,4 @@ jobs:
           severity: CRITICAL
           ignore-unfixed: true
           exit-code: "1"
+          token-setup-trivy: ${{ github.token }}
