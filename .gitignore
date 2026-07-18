@@ -116,3 +116,5 @@ ehthumbs.db
 *.tar
 
 .agents/
+# Material temporal del challenge (no subir)
+CHALLENGE.md

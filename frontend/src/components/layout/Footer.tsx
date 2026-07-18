@@ -28,7 +28,7 @@ export default function Footer() {
           <div className="footer-links-group">
             <h4 className="footer-links-title">Proyecto</h4>
             <ul>
-              <li><a href="https://github.com/EzequielAngel0/AluraAgente" target="_blank" rel="noopener noreferrer">Repositorio</a></li>
+              <li><a href="https://github.com/EzequielAngel0/DocuAgent" target="_blank" rel="noopener noreferrer">Repositorio</a></li>
               <li><Link href="/docs">Documentación</Link></li>
             </ul>
           </div>
@@ -49,7 +49,7 @@ export default function Footer() {
             &copy; {currentYear} DocuAgent. Desarrollado como proyecto para el programa de formación en IA de Alura LATAM.
           </p>
           <a
-            href="https://github.com/EzequielAngel0/AluraAgente"
+            href="https://github.com/EzequielAngel0/DocuAgent"
             target="_blank"
             rel="noopener noreferrer"
             className="footer-github-link"

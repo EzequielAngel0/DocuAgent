@@ -192,8 +192,8 @@ Todo corre en contenedores — solo necesitas **Git** y **Podman** (o Docker).
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/EzequielAngel0/AluraAgente.git
-cd AluraAgente
+git clone https://github.com/EzequielAngel0/DocuAgent.git
+cd DocuAgent
 
 # 2. Configurar variables de entorno
 cp .env.example .env
@@ -252,6 +252,13 @@ internet) y HTTPS automático de Cloudflare.
 También existe un pipeline de deploy automático (build → OCIR → SSH a la VM)
 en GitHub Actions, gateado por la variable `DEPLOY_ENABLED`.
 
+Panel de administración en producción (más capturas en
+[`docs/assets/screenshots/`](docs/assets/screenshots/)):
+
+<p align="center">
+  <img src="docs/assets/screenshots/05-admin-dashboard.png" alt="Panel admin de DocuAgent" width="720"/>
+</p>
+
 > Guías completas: [`docs/deployment/`](docs/deployment/) ·
 > Infra como código (Terraform): [`infra/terraform/`](infra/terraform/)
 
@@ -271,7 +278,7 @@ en GitHub Actions, gateado por la variable `DEPLOY_ENABLED`.
 ## 📁 Estructura del Proyecto
 
 ```
-AluraAgente/
+DocuAgent/
 ├── backend/
 │   ├── app/
 │   │   ├── api/v1/            # Endpoints REST + WebSocket
