@@ -116,7 +116,7 @@ jobs:
 
       # Bloquea el build solo ante vulnerabilidades CRÍTICAS con fix disponible.
       - name: Trivy (vulnerabilidades del repositorio)
-        uses: aquasecurity/trivy-action@v0.28.0
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: fs
           scan-ref: .
