@@ -3,17 +3,23 @@
 Carpeta destino de las capturas del sistema para el README y la documentación.
 Colocar aquí los PNG y referenciarlos desde `docs/showcase.md`.
 
-## Capturas sugeridas y nombres
+## Capturas y estado
 
-| Archivo | Qué capturar |
-|---|---|
-| `01-landing.png` | Página de inicio (landing) |
-| `02-chat-respuesta.png` | Chat con una respuesta y **fuentes citadas** visibles |
-| `03-chat-fallback.png` | Chat respondiendo honestamente que no encontró info |
-| `04-admin-login.png` | Login admin (con el widget de Turnstile) |
-| `05-admin-dashboard.png` | Panel admin: listado de documentos y categorías |
-| `06-admin-upload.png` | Subida de documento (arrastrar y soltar) |
-| `07-mobile-chat.png` | Vista móvil del chat (responsive) |
+| Archivo | Qué muestra | Estado |
+|---|---|---|
+| `01-landing.png` | Página de inicio (landing) | ✅ hecha (producción) |
+| `02-chat-inicio.png` | Chat: bienvenida + consultas sugeridas | ✅ hecha (producción) |
+| `02b-chat-respuesta.png` | Chat con respuesta y **fuentes citadas** | ⏳ manual |
+| `03-chat-fallback.png` | Chat respondiendo que no encontró info | ⏳ manual |
+| `04-admin-login.png` | Login admin (widget de Turnstile) | ⏳ manual¹ |
+| `05-admin-dashboard.png` | Panel admin: documentos y categorías | ⏳ manual |
+| `06-admin-upload.png` | Subida de documento (drag&drop) | ⏳ manual |
+| `07-mobile-chat.png` | Vista móvil del chat (responsive) | ✅ hecha (producción) |
+
+> ¹ Las capturas automatizadas se tomaron con Chromium headless contra
+> producción; la página de login no puede automatizarse porque **Turnstile
+> detecta y bloquea navegadores headless** (el anti-bot haciendo su trabajo).
+> Las capturas del panel admin requieren sesión (TOTP) y se toman a mano.
 
 ## Recomendaciones
 
