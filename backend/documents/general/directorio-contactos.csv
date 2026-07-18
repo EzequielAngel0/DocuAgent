@@ -1,0 +1,8 @@
+area,tema,extension,correo,horario
+Recursos Humanos,Vacaciones y prestaciones,110,rh@nebula.example,Lunes a viernes 9:00-18:00
+Finanzas,Cuentas por pagar y reembolsos,130,finanzas@nebula.example,Lunes a viernes 9:00-17:00
+Finanzas,Anticipos de viaticos y tarjeta corporativa,131,finanzas@nebula.example,Lunes a viernes 9:00-17:00
+Mesa de Ayuda TI,Soporte tecnico e incidentes,150,soporte@nebula.example,Lunes a viernes 8:00-20:00
+Bienestar,Apoyo psicologico confidencial,170,bienestar@nebula.example,24/7
+Seguridad,Emergencias internas,200,seguridad@nebula.example,24/7
+Seguridad e Higiene,Reporte de condiciones inseguras,210,seguridad@nebula.example,Lunes a viernes 9:00-18:00
