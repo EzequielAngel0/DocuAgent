@@ -43,7 +43,7 @@ export default function SourceCitations({ citations }: SourceCitationsProps) {
                 <span className="citation-badge-category">{cite.category}</span>
               </div>
               <p className="citation-excerpt">
-                "{cite.excerpt}"
+                &ldquo;{cite.excerpt}&rdquo;
               </p>
             </li>
           ))}

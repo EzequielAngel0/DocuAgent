@@ -69,7 +69,7 @@ export default function Hero() {
                 <span className="bubble-bot-name">DocuAgent</span>
               </div>
               <p className="bubble-text">
-                "El periodo de vacaciones anuales es de 15 días laborables..."
+                &ldquo;El periodo de vacaciones anuales es de 15 días laborables...&rdquo;
               </p>
               <div className="bubble-source">
                 <span>Fuente: Manual_Onboarding.pdf (Pág. 4)</span>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FolderPlus, Trash2, Edit2, Folder, Users, Shield, CircleDollarSign, Plus, X } from "lucide-react";
+import { Trash2, Edit2, Folder, Users, Shield, CircleDollarSign, Plus, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import Notice, { NoticeKind } from "@/components/admin/Notice";
@@ -37,14 +37,14 @@ export default function AdminCategoriesPage() {
 
       // 2. Cargar documentos para calcular docsCount
       const docsRes = await apiFetch(`/admin/documents`);
-      let docs: any[] = [];
+      let docs: { category_id: string }[] = [];
       if (docsRes.ok) {
         docs = await docsRes.json();
       }
 
       // Mapear con conteos de documentos reales
       const enrichedCats = cats.map((cat: Category) => {
-        const count = docs.filter((d: any) => d.category_id === cat.id).length;
+        const count = docs.filter((d) => d.category_id === cat.id).length;
         return { ...cat, docsCount: count };
       });
 
@@ -54,9 +54,13 @@ export default function AdminCategoriesPage() {
     }
   };
 
+  /* eslint-disable react-hooks/set-state-in-effect -- falso positivo: el
+     setState de loadCategories ocurre tras `await` (asíncrono), no en el
+     cuerpo síncrono del efecto. */
   useEffect(() => {
     loadCategories();
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleOpenCreateModal = () => {
     setEditingCategory(null);

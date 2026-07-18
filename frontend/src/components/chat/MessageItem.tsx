@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ThumbsUp, ThumbsDown, Bot, User } from "lucide-react";
 import SourceCitations, { Citation } from "./SourceCitations";
 
@@ -17,16 +17,16 @@ interface MessageItemProps {
 }
 
 export default function MessageItem({ message }: MessageItemProps) {
-  const [feedback, setFeedback] = useState<"positive" | "negative" | null>(null);
+  // Restaurar el feedback guardado con un initializer (persiste al recargar la
+  // página o cambiar de sesión). Los mensajes solo se montan en cliente, pero
+  // se protege el acceso a localStorage por si el árbol se prerenderiza.
+  const [feedback, setFeedback] = useState<"positive" | "negative" | null>(() => {
+    if (typeof window === "undefined") return null;
+    const saved = localStorage.getItem(`chat_feedback_${message.id}`);
+    return saved === "positive" || saved === "negative" ? saved : null;
+  });
 
   const isAssistant = message.sender === "assistant";
-
-  // Restaurar el feedback guardado: el pulgar debe persistir al recargar la
-  // página o cambiar de sesión (antes se reiniciaba porque vivía solo en estado).
-  useEffect(() => {
-    const saved = localStorage.getItem(`chat_feedback_${message.id}`);
-    if (saved === "positive" || saved === "negative") setFeedback(saved);
-  }, [message.id]);
 
   // Formateador simple de texto con soporte básico de markdown (**bold**, - list)
   const formatMessageText = (txt: string) => {

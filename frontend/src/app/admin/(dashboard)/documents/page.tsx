@@ -130,9 +130,10 @@ export default function AdminDocumentsPage() {
 
       // Limpiar barra de progreso
       setTimeout(() => setUploadProgress(null), 800);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setNotice({ kind: "error", message: "Error al subir el archivo: " + err.message });
+      const message = err instanceof Error ? err.message : "Error desconocido.";
+      setNotice({ kind: "error", message: "Error al subir el archivo: " + message });
       setUploadProgress(null);
     }
   };

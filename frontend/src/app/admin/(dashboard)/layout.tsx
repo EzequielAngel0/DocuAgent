@@ -13,8 +13,7 @@ import {
   Sun,
   Moon,
   Menu,
-  X,
-  Bot
+  X
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -27,10 +26,14 @@ export default function AdminLayout({
   const pathname = usePathname();
   const router = useRouter();
 
+  // Sincronizar el tema con el atributo del HTML (client-only, evita flash).
+  /* eslint-disable react-hooks/set-state-in-effect -- sincronización client-only
+     con el DOM (data-theme): un initializer causaría hydration mismatch en SSR. */
   useEffect(() => {
     const activeTheme = document.documentElement.getAttribute("data-theme") as "light" | "dark" || "light";
     setTheme(activeTheme);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";

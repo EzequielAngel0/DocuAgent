@@ -3,18 +3,21 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sun, Moon, Menu, X, Bot } from "lucide-react";
+import { Sun, Moon, Menu, X } from "lucide-react";
 
 export default function Navbar() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  // Inicializar tema leyendo el atributo setead en HTML (evita flash)
+  // Inicializar tema leyendo el atributo seteado en HTML (evita flash).
+  /* eslint-disable react-hooks/set-state-in-effect -- sincronización client-only
+     con el DOM (data-theme): un initializer causaría hydration mismatch en SSR. */
   useEffect(() => {
     const activeTheme = document.documentElement.getAttribute("data-theme") as "light" | "dark" || "light";
     setTheme(activeTheme);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Files, FileText, HeartHandshake, HelpCircle, ThumbsDown, ArrowUpRight } from "lucide-react";
+import { Files, FileText, HeartHandshake, HelpCircle, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 

@@ -26,8 +26,8 @@ export default function ChatPage() {
     const key = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
     if (!key) return;
 
-    (window as any).onloadChatTurnstile = () => {
-      const ts = (window as any).turnstile;
+    window.onloadChatTurnstile = () => {
+      const ts = window.turnstile;
       const el = document.getElementById("chat-turnstile");
       if (ts && el) {
         ts.render("#chat-turnstile", {
@@ -53,11 +53,13 @@ export default function ChatPage() {
 
     return () => {
       if (document.head.contains(script)) document.head.removeChild(script);
-      delete (window as any).onloadChatTurnstile;
+      delete window.onloadChatTurnstile;
     };
   }, []);
 
-  // 1. Cargar sesiones iniciales de localStorage al montar
+  // 1. Cargar sesiones iniciales de localStorage al montar.
+  /* eslint-disable react-hooks/set-state-in-effect -- hidratación client-only
+     desde localStorage: con SSR un initializer causaría hydration mismatch. */
   useEffect(() => {
     const savedSessions = localStorage.getItem("chat_sessions");
     if (savedSessions) {
@@ -89,6 +91,7 @@ export default function ChatPage() {
       setMessages([]);
     }
   }, [activeSessionId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Guardar mensajes de la sesión activa al localStorage
   const saveMessages = (sessId: string, msgs: Message[]) => {
@@ -209,12 +212,14 @@ export default function ChatPage() {
             ];
           });
         } else if (msg.type === "done") {
-          const finalCitations = msg.citations.map((c: any) => ({
-            documentName: c.title,
-            page: `Pág. ${c.page}`,
-            category: c.category,
-            excerpt: c.snippet
-          }));
+          const finalCitations = msg.citations.map(
+            (c: { title: string; page: number | string; category: string; snippet: string }) => ({
+              documentName: c.title,
+              page: `Pág. ${c.page}`,
+              category: c.category,
+              excerpt: c.snippet
+            })
+          );
 
           setMessages((prev) => {
             const finalMsgs = prev.map((m) =>

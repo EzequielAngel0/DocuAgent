@@ -2,8 +2,16 @@
 
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Database, Layers, Eye } from "lucide-react";
+import { ArrowLeft, Database, Layers } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+
+// Payload crudo que devuelve el backend por cada punto de Qdrant.
+interface ChunkPayload {
+  content: string;
+  vector: number[];
+  page: number | string;
+  document_name: string;
+}
 
 interface Chunk {
   index: number;
@@ -40,10 +48,10 @@ export default function ChunksPage({
           throw new Error("No se pudieron cargar los fragmentos vectoriales.");
         }
 
-        const data = await res.json();
-        
+        const data: ChunkPayload[] = await res.json();
+
         // Mapear los datos de Qdrant a nuestro estado
-        const mappedChunks: Chunk[] = data.map((item: any, idx: number) => ({
+        const mappedChunks: Chunk[] = data.map((item, idx) => ({
           index: idx + 1,
           text: item.content,
           vectorSnippet: `[${item.vector.map((v: number) => v.toFixed(3)).join(", ")}, ...]`,
@@ -60,8 +68,8 @@ export default function ChunksPage({
         } else {
           setDocumentName("Documento");
         }
-      } catch (err: any) {
-        setError(err.message || "Error al conectar con el backend.");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error al conectar con el backend.");
         console.error(err);
       } finally {
         setLoading(false);
@@ -88,6 +96,11 @@ export default function ChunksPage({
         </div>
       </div>
 
+      {loading && <p className="section-desc">Cargando fragmentos vectoriales...</p>}
+      {error && !loading && (
+        <p className="section-desc" style={{ color: "var(--color-primary)" }}>{error}</p>
+      )}
+
       <div className="chunks-grid">
         {chunks.map((chunk) => (
           <div key={chunk.index} className="card chunk-card flex flex-col">
@@ -103,7 +116,7 @@ export default function ChunksPage({
             </div>
 
             <div className="chunk-card-body flex-grow">
-              <p className="chunk-text">"{chunk.text}"</p>
+              <p className="chunk-text">&ldquo;{chunk.text}&rdquo;</p>
             </div>
 
             <div className="chunk-card-vector">

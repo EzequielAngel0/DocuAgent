@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Lock, Mail, KeyRound, Bot, ShieldAlert } from "lucide-react";
+import { Lock, Mail, KeyRound, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminLoginPage() {
@@ -11,7 +11,6 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [turnstileChecked, setTurnstileChecked] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
-  const [siteKey, setSiteKey] = useState<string | null>(null);
   const [totpCode, setTotpCode] = useState<string[]>(Array(6).fill(""));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -24,15 +23,15 @@ export default function AdminLoginPage() {
   // 1. Cargar script de Turnstile siempre para la verificación real
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "0x4AAAAAADr0awWLSWtkmM4f";
-    setSiteKey(key);
-    (window as any).onloadTurnstileCallback = () => {
-      if ((window as any).turnstile) {
-        (window as any).turnstile.render("#turnstile-widget", {
+    window.onloadTurnstileCallback = () => {
+      if (window.turnstile) {
+        window.turnstile.render("#turnstile-widget", {
           sitekey: key,
           theme: "dark",
           callback: (token: string) => {
             setTurnstileToken(token);
             setTurnstileChecked(true);
+            setError(null); // token nuevo: limpiar cualquier error previo
           },
           "expired-callback": () => {
             setTurnstileToken("");
@@ -52,14 +51,9 @@ export default function AdminLoginPage() {
       if (document.head.contains(script)) {
         document.head.removeChild(script);
       }
-      delete (window as any).onloadTurnstileCallback;
+      delete window.onloadTurnstileCallback;
     };
   }, []);
-
-  // Limpiar error al escribir
-  useEffect(() => {
-    setError(null);
-  }, [email, password, turnstileToken]);
 
   const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,7 +215,10 @@ export default function AdminLoginPage() {
                     className="form-input"
                     placeholder="admin@empresa.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setError(null); // limpiar error al escribir
+                    }}
                     disabled={loading || isLocked}
                     required
                   />
@@ -238,7 +235,10 @@ export default function AdminLoginPage() {
                     className="form-input"
                     placeholder="Contraseña"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setError(null); // limpiar error al escribir
+                    }}
                     disabled={loading || isLocked}
                     required
                   />

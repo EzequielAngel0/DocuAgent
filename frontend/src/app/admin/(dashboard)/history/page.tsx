@@ -38,7 +38,7 @@ export default function AdminHistoryPage() {
         const res = await apiFetch(`/admin/categories`);
         if (res.ok) {
           const data = await res.json();
-          setCategories(data.map((c: any) => c.name));
+          setCategories(data.map((c: { name: string }) => c.name));
         }
       } catch (err) {
         console.error(err);
@@ -237,7 +237,7 @@ export default function AdminHistoryPage() {
             <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
               <div className="detail-field">
                 <span className="detail-field-label">Pregunta:</span>
-                <p className="detail-field-value query">"{selectedLog.query}"</p>
+                <p className="detail-field-value query">&ldquo;{selectedLog.query}&rdquo;</p>
               </div>
 
               <div className="detail-field">
@@ -278,7 +278,7 @@ export default function AdminHistoryPage() {
                           [{index + 1}] {cite.title} - Pág. {cite.page} (Confianza: {cite.confidence}%)
                         </span>
                         <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "2px", fontStyle: "italic" }}>
-                          "{cite.snippet}"
+                          &ldquo;{cite.snippet}&rdquo;
                         </p>
                       </div>
                     ))}
