@@ -13,7 +13,6 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.lockout import login_lockout
 from app.core.ratelimit import limiter
-from app.core.turnstile import verify_turnstile
 from app.core.security import (
     create_access_token,
     generate_totp_secret,
@@ -22,6 +21,7 @@ from app.core.security import (
     verify_password,
     verify_totp_code,
 )
+from app.core.turnstile import verify_turnstile
 from app.db.session import get_db
 from app.models import AdminUser, LoginRequest, Setup2FAResponse, Verify2FARequest
 
