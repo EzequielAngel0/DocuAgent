@@ -45,6 +45,9 @@ out/
 # Documentacion sensible (dominio, tokens, tunnels)
 docs/private/
 
+# Guia de despliegue temporal en la VM del ACP (detalles internos, no en repo)
+DEPLOY-VM-ACP.md
+
 # Cloudflare tunnel
 cloudflared/
 *.json
@@ -54,10 +57,18 @@ cloudflared/
 !next.config.ts
 !pyproject.toml
 !alembic.ini
+!.markdownlint.json
 
 # OCI credentials
 oci-config/
 *.oci
+
+# Terraform (state y vars con datos sensibles; el lock SÍ se versiona)
+.terraform/
+*.tfstate
+*.tfstate.*
+**/terraform.tfvars
+crash.log
 
 # ============================================================
 # Archivos del proyecto que no van al repo
@@ -80,8 +91,8 @@ logs/
 # IDE y sistema operativo
 # ============================================================
 
-# VSCode
-.vscode/
+# VSCode (ignora todo el contenido salvo los 2 archivos compartidos del equipo)
+.vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
 
@@ -104,4 +115,4 @@ ehthumbs.db
 # No subir imagenes construidas localmente
 *.tar
 
-CLAUDE.md
+.agents/

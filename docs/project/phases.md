@@ -152,7 +152,7 @@ gantt
 **Prioridad**: 🟡 Alta
 
 ### Entregables
-- [ ] Frontend Next.js: landing page profesional
+- [x] Frontend Next.js: landing page profesional
 - [ ] Frontend Next.js: interfaz de chat conversacional
 - [ ] Frontend Next.js: panel de carga de documentos
 - [ ] Frontend Next.js: panel de administración (categorías, documentos)
@@ -177,9 +177,9 @@ gantt
 **Prioridad**: 🟡 Alta
 
 ### Entregables
-- [ ] Containerfiles (Podman) para backend, frontend, servicios
-- [ ] podman-compose.yml para desarrollo local
-- [ ] podman-compose.prod.yml para producción
+- [x] Containerfiles (Podman) para backend, frontend, servicios
+- [x] podman-compose.yml para desarrollo local
+- [x] podman-compose.prod.yml para producción
 - [ ] Push de imágenes a OCI Container Registry (OCIR)
 - [ ] Configuración de OCI: VCN, subnets, security groups
 - [ ] Despliegue en OCI Container Instances o Compute

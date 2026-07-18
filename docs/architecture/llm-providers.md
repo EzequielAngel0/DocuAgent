@@ -68,6 +68,14 @@ classDiagram
 
 ## Configuración
 
+> **Config activa real (staging/prod)**: `LLM_PROVIDER=gemini` con
+> `GEMINI_MODEL=gemini-2.5-flash` (los modelos `gemini-1.5-flash` y
+> `gemini-2.0-flash` quedaron deprecados/sin cuota en el free tier).
+> `LLM_MAX_RETRIES=1` para no colgar la respuesta ante un proveedor caído, y
+> `LANGCHAIN_TRACING_V2=false` por defecto (LangSmith opcional). La cadena de
+> fallback real se ejecuta vía `generate_with_fallback` / `stream_with_fallback`
+> en [`backend/app/providers/`](../../backend/app/providers/).
+
 La selección del proveedor se hace por variable de entorno:
 
 ```env

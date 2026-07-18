@@ -1,0 +1,26 @@
+version: "3.8"
+
+# Override de BUILD LOCAL para produccion en una sola VM (portafolio).
+# Se aplica ENCIMA de base + prod cuando `.env.prod` tiene DEPLOY_MODE=local:
+# restaura el build que podman-compose.prod.yml anula (imagenes de OCIR),
+# para construir en la propia VM sin necesidad de registro de contenedores.
+# Modo build local: DEPLOY_MODE=local en .env.prod (lo aplica ops/docuagent.sh).
+
+services:
+  backend:
+    image: localhost/docuagent-backend:local
+    build:
+      context: ./backend
+      dockerfile: Containerfile
+
+  frontend:
+    image: localhost/docuagent-frontend:local
+    build:
+      context: ./frontend
+      dockerfile: Containerfile
+      args:
+        # NEXT_PUBLIC_* se inlinean en build-time (no basta el env_file en runtime).
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME}
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY}

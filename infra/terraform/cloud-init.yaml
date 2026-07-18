@@ -1,0 +1,17 @@
+#cloud-config
+# Prepara la VM para correr el stack con Podman (rootless) tras el primer boot.
+package_update: true
+packages:
+  - podman
+  - git
+  - python3-pip
+  - curl
+
+runcmd:
+  # podman-compose (proveedor que usa `podman compose` del runner ops/).
+  - pip3 install --break-system-packages podman-compose
+  # Permite que los contenedores rootless del usuario 'ubuntu' sigan vivos al cerrar sesión.
+  - loginctl enable-linger ubuntu || true
+  - sudo -u ubuntu XDG_RUNTIME_DIR=/run/user/$(id -u ubuntu) systemctl --user enable --now podman.socket || true
+
+final_message: "VM lista. Clona el repo, crea .env.prod y corre ./ops/docuagent.sh up"

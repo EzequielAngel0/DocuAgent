@@ -1,0 +1,35 @@
+{
+    // Convenciones del proyecto DocuAgent (independientes de la config personal de cada quien)
+    "editor.formatOnSave": true,
+    "files.eol": "\n",
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+
+    // Python: Ruff con line-length 100 (ver backend/pyproject.toml)
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.tabSize": 4,
+        "editor.rulers": [
+            100
+        ],
+        "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports.ruff": "explicit"
+        }
+    },
+
+    // Frontend: Prettier para formato, ESLint para lint
+    "[javascript][javascriptreact][typescript][typescriptreact][json][jsonc][css]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.tabSize": 2
+    },
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "explicit"
+    },
+    "eslint.workingDirectories": [
+        {
+            "mode": "auto"
+        }
+    ],
+    "prettier.requireConfig": false
+}

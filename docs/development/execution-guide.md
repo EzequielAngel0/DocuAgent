@@ -51,6 +51,13 @@ Colaboradores preguntan en /chat → agente busca en docs indexados
 Los documentos son de una empresa ficticia (generados con IA).
 También se pueden cargar vía scripts CLI o API directa.
 
+### Identidad Visual y Nombre del Proyecto
+
+* **Nombre Oficial:** **DocuAgent** (descriptivo de Documentos + Inteligencia Artificial/Agente RAG).
+* **Temas Admitidos:** Soporte completo para **Tema Claro (Light Mode)** y **Tema Oscuro (Dark Mode)**. La interfaz web contará con un interruptor/selector (toggle) en el encabezado o barra de navegación para alternar de forma fluida y en caliente entre ambos temas, persistiendo la preferencia del usuario en localStorage.
+* **Paleta de Colores:** Se deben evitar colores tipo neón o excesivamente intensos. En su lugar, se implementará una paleta de colores cálidos y suaves a la vista (por ejemplo: ámbar suave, terracota, bronce y verde oliva silenciado, combinados con fondos de carbón cálido en modo oscuro y crema o arena suave en modo claro) para lograr una apariencia premium, acogedora y confortable para lecturas prolongadas.
+* **Uso de Iconos vs. Emojis:** Queda estrictamente prohibido el uso de emojis en la interfaz gráfica de la aplicación (botones, menús, cabeceras, tarjetas, etc.). En su lugar, se utilizarán exclusivamente iconos vectoriales (como la biblioteca `lucide-react` o SVGs personalizados inline) para asegurar un aspecto profesional, consistente y limpio.
+
 ### Responsividad
 
 **TODO el frontend es 100% responsive.** Desktop, tablet y móvil.
@@ -108,17 +115,17 @@ gantt
 **Meta**: Página de presentación premium, responsive, que impresione.
 
 ### Tareas
-- [ ] Inicializar proyecto Next.js 15 (App Router, TypeScript)
-- [ ] Configurar CSS global (variables, dark mode, fonts Inter + JetBrains Mono)
-- [ ] Hero section con título, subtítulo y CTA → `/chat`
-- [ ] Sección "Características" (multi-formato, multilingüe, citación de fuentes)
-- [ ] Sección "Cómo funciona" (diagrama visual del pipeline)
-- [ ] Sección "Tech Stack" (logos/badges de las tecnologías)
-- [ ] Footer con créditos (Alura LATAM)
-- [ ] Responsive: mobile, tablet, desktop (mobile-first)
-- [ ] Animaciones suaves (scroll reveal, hover effects)
-- [ ] SEO: meta tags, Open Graph, title
-- [ ] Navbar con links: Inicio · Chat · Admin
+- [x] Inicializar proyecto Next.js 15 (App Router, TypeScript)
+- [x] Configurar CSS global (variables de diseño, soporte completo para temas claro y oscuro con persistencia, fonts Inter + JetBrains Mono)
+- [x] Hero section con título, subtítulo y CTA → `/chat`
+- [x] Sección "Características" (multi-formato, multilingüe, citación de fuentes)
+- [x] Sección "Cómo funciona" (diagrama visual del pipeline)
+- [x] Sección "Tech Stack" (logos/badges de las tecnologías)
+- [x] Footer con créditos (Alura LATAM)
+- [x] Responsive: mobile, tablet, desktop (mobile-first)
+- [x] Animaciones suaves (scroll reveal, hover effects)
+- [x] SEO: meta tags, Open Graph, title
+- [x] Navbar con links: Inicio · Chat · Admin e interruptor (toggle) para alternar temas (Claro/Oscuro)
 
 ---
 
@@ -295,7 +302,7 @@ documents/
 
 ## Fase 10: Deploy en OCI + Registro (4 días)
 
-**Meta**: Agente accesible en `agent.angelezequiel.dev` + evidencia.
+**Meta**: DocuAgent accesible en `docuagent.angelezequiel.dev` + evidencia.
 
 ### Tareas
 - [ ] Containerfiles finales (backend + frontend)

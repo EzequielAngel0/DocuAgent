@@ -1,5 +1,25 @@
 # 🔒 Seguridad del Proyecto
 
+> **Cómo leer este doc**: describe el **diseño y la justificación** de cada capa
+> de seguridad; algunos fragmentos de código son ilustrativos y no calcan el
+> archivo real. Para el **estado implementado**, los hallazgos y el detalle de
+> los módulos reales, ver
+> [`security-audit.md`](security-audit.md). Módulos reales: sanitizer en
+> `core/sanitizer.py`, headers/rate-limit en `main.py` + `core/ratelimit.py`,
+> rate limit del chat en `core/ws_ratelimit.py`, lockout en `core/lockout.py`,
+> Turnstile en `core/turnstile.py`, auth/JWT en `core/security.py` +
+> `api/v1/endpoints/auth.py`.
+>
+> **Resumen de lo implementado**: anti prompt-injection (sanitizer + system prompt
+> blindado + delimitadores XML + validator), **security headers + CSP**, **CORS por
+> allowlist** (sin comodín con credenciales), **rate limit** (slowapi global +
+> por-endpoint + WS por-IP + **tope global/hora** del chat), **auth admin**
+> email+password (bcrypt) → **Cloudflare Turnstile** → **TOTP 2FA** → **JWT
+> (iss/aud) en cookie httponly+secure**, **lockout** de login/2FA, validación de
+> **magic bytes** + anti zip-bomb en uploads, **fail-fast de secretos** en prod,
+> TrustedHost, y endurecimiento de contenedores (no-root, `cap_drop`,
+> `no-new-privileges`, límites de mem/cpu/pids).
+
 ## Visión General
 
 Este documento cubre todas las capas de seguridad del proyecto DocuAgent, desde la protección contra prompt injection hasta la seguridad de infraestructura en producción.
@@ -283,8 +303,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 from fastapi.middleware.cors import CORSMiddleware
 
 ALLOWED_ORIGINS = [
-    "https://tu-dominio.dev",
-    "https://agent.tu-dominio.dev",
+    "https://angelezequiel.dev",
+    "https://docuagent.angelezequiel.dev",
 ]
 
 # Solo en desarrollo
@@ -615,28 +635,36 @@ services:
 
 ## 7. Seguridad en la Red (OCI)
 
-### 7.1 VCN y Subnets
+> Modelo real provisionado con Terraform ([`infra/terraform/`](../../infra/terraform/),
+> resumen en [`../deployment/oci-terraform.md`](../deployment/oci-terraform.md)).
+> **No hay Load Balancer ni subnet pública**: las instancias **no tienen IP
+> pública** y no exponen puertos. El tráfico de la app entra por el **túnel de
+> Cloudflare** (conexión *saliente*); la administración va por **OCI Bastion**.
+
+### 7.1 VCN y Subnet (privada)
 
 ```
-VCN: docuagent-vcn (10.0.0.0/16)
-├── Subnet Pública (10.0.1.0/24)
-│   └── Load Balancer
-│       └── Solo puertos 80, 443 abiertos
-│
-└── Subnet Privada (10.0.2.0/24)
-    ├── Backend Container
-    ├── PostgreSQL
-    └── Qdrant
-    └── Sin acceso directo desde Internet
+VCN compartida (10.0.0.0/16)
+└── Subnet PRIVADA (10.0.1.0/24)  ── prohibit_public_ip_on_vnic = true
+    ├── Instancia por proyecto (backend + frontend + postgres + qdrant + cloudflared)
+    └── Sin IP pública, sin ingress público
+    │
+    ├── NAT Gateway      → única salida a internet (OCIR, Cohere/Gemini, túnel)
+    ├── Service Gateway  → servicios de OCI sin pasar por internet
+    └── OCI Bastion      → SSH gestionado a las instancias (sin IP pública)
 ```
 
-### 7.2 Security Groups
+### 7.2 Reglas de red (security list)
 
-| Grupo | Ingress | Egress |
-|-------|---------|--------|
-| **LB-SG** | 80/tcp, 443/tcp desde 0.0.0.0/0 | 8000/tcp hacia Backend-SG |
-| **Backend-SG** | 8000/tcp desde LB-SG | 5432/tcp, 6333/tcp hacia DB-SG; HTTPS hacia APIs externas |
-| **DB-SG** | 5432/tcp, 6333/tcp desde Backend-SG | Ninguno |
+| Dirección | Regla | Razón |
+|-----------|-------|-------|
+| **Ingress** | TCP 22 solo desde la VCN (`vcn_cidr`) | SSH a través del Bastion; **nada** de 80/443 público |
+| **Egress** | Todo permitido (vía NAT) | Pull de imágenes, APIs de LLM/Cohere y el túnel saliente |
+| **Bastion** | `bastion_client_cidrs` (tu IP `/32`) | Restringe quién abre sesiones SSH |
+
+Las BDs (PostgreSQL/Qdrant) además quedan solo en la red interna de contenedores
+(`internal`), sin publicar puertos. Resultado: superficie de ataque mínima, sin
+puntos de entrada públicos salvo el túnel.
 
 ---
 

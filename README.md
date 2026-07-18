@@ -1,7 +1,7 @@
 # 🤖 DocuAgent — Agente RAG de Documentación Empresarial
 
 <p align="center">
-  <img src="docs/assets/logo-placeholder.png" alt="DocuAgent Logo" width="200"/>
+  <img src="docs/assets/logo-with-bg.svg" alt="DocuAgent Logo" width="200"/>
 </p>
 
 <p align="center">
@@ -56,6 +56,7 @@ Colaborador hace una pregunta
 - 📎 **Citación de fuentes** — Cada respuesta incluye referencias al documento original
 - 🏷️ **Categorías dinámicas** — Sistema de categorización configurable (RH, Legal, Financiero, etc.)
 - 📈 **Observabilidad** — Trazabilidad completa con LangSmith
+- 🎨 **Doble Tema** — Interfaz adaptativa con soporte completo para Tema Claro (Light Mode) y Tema Oscuro (Dark Mode) con persistencia
 - 🐳 **Containerizado** — Desplegable con Podman/Docker en cualquier entorno
 - ☁️ **Cloud-ready** — Diseñado para Oracle Cloud Infrastructure (OCI)
 

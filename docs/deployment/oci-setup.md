@@ -1,147 +1,128 @@
 # ☁️ Deploy en OCI
 
-## Arquitectura en OCI
+Despliegue de portafolio en **una sola VM** por proyecto, provisionada con
+**Terraform** y sin IP pública. El acceso administrativo va por **OCI Bastion**;
+el tráfico de la app entra por el **túnel de Cloudflare** (conexión saliente).
+
+> **Estado**: el deploy está automatizado y documentado pero **inactivo** hasta
+> crear la instancia (el workflow está gateado por `vars.DEPLOY_ENABLED`).
+> Checklist de qué falta → [`oci-go-live.md`](oci-go-live.md).
+>
+> Infra como código → [`../../infra/terraform/`](../../infra/terraform/) y su
+> [README](../../infra/terraform/README.md). Detalle del túnel/dominio (sensible)
+> → `docs/private/domain-setup.md`.
+
+## Arquitectura
 
 ```mermaid
 graph TB
-    INET((Internet)) --> CF[Cloudflare<br/>DNS + CDN + WAF]
-    CF -->|Tunnel| CFD[cloudflared<br/>en VM]
+    INET((Internet)) --> CF[Cloudflare<br/>DNS + TLS + WAF]
+    CF -->|Tunnel saliente| CFD[cloudflared en la VM]
 
-    subgraph OCI["Oracle Cloud Infrastructure"]
-        CFD --> FE[Frontend<br/>Next.js :3000]
-        CFD --> BE[Backend<br/>FastAPI :8000]
-
-        BE --> PG[(PostgreSQL<br/>:5432)]
-        BE --> QD[(Qdrant<br/>:6333)]
-
-        BE -.->|Logs| OS[OCI Object Storage]
-        BE -.->|Secrets| OV[OCI Vault]
+    subgraph OCI["OCI — red compartida (Terraform)"]
+        subgraph SUB["Subnet privada (sin IP pública)"]
+            CFD --> FE[Frontend :3000]
+            CFD --> BE[Backend :8000]
+            BE --> PG[(PostgreSQL)]
+            BE --> QD[(Qdrant)]
+        end
+        NAT[NAT Gateway] -->|egress: imágenes, Cohere/Gemini, túnel| INET
+        SUB --> NAT
+        BAS[OCI Bastion] -->|SSH gestionado| SUB
     end
 
     style CF fill:#f39c12,color:#fff
-    style PG fill:#3498db,color:#fff
-    style QD fill:#e74c3c,color:#fff
-    style OV fill:#9b59b6,color:#fff
+    style BAS fill:#9b59b6,color:#fff
 ```
 
-## Recursos OCI Necesarios
+**Decisiones clave**:
+
+- **Sin IP pública** en las instancias (`prohibit_public_ip_on_vnic = true`).
+  No se exponen puertos: la app entra por el túnel (saliente), no por ingress.
+- **NAT Gateway** = única salida a internet (pull de OCIR, APIs de Cohere/Gemini,
+  el túnel). **Service Gateway** para servicios de OCI sin pasar por internet.
+- **OCI Bastion** (servicio gestionado) para entrar por SSH sin IP pública.
+- **Red compartida** (1 VCN + subnet + NAT + Bastion) reutilizable por varios
+  proyectos; **una instancia por proyecto** (mapa `var.projects`).
+
+## Recursos OCI
 
 | Recurso | Tier | Propósito |
 |---------|------|-----------|
-| **Compute Instance** | VM.Standard.A1.Flex (ARM, Always Free) | Contenedores (backend, frontend, BDs) |
-| **Object Storage** | Standard (Always Free: 20GB) | Documentos originales subidos |
-| **Vault** | Default | API keys, DB passwords |
-| **Container Registry** | Standard (Always Free: 500MB) | Imágenes de backend y frontend |
-| **VCN** | 1 VCN + 2 subnets | Red aislada |
+| **Compute** (`VM.Standard.A1.Flexible`) | Ampere ARM, Always Free | Una por proyecto (1 OCPU / 6 GB recomendado para un stack RAG) |
+| **VCN + subnet privada + NAT + Service GW** | Always Free | Red compartida |
+| **OCI Bastion** | Standard | SSH a instancias privadas |
+| **Container Registry (OCIR)** | Always Free (500 MB) | Imágenes de backend y frontend |
+| **Vault** | — | Secretos en producción |
 
-> **Always Free**: OCI ofrece VMs ARM con 4 OCPUs y 24GB RAM gratis para siempre.
-> Suficiente para este proyecto.
+> **Densidad**: un stack pesado (Postgres + Qdrant + backend LLM) por instancia de
+> 1 OCPU / 6 GB. Co-locar un segundo proyecto solo si es ligero.
 
-## Paso a Paso
-
-### 1. Crear VCN
-
-```
-Nombre: docuagent-vcn
-CIDR: 10.0.0.0/16
-
-Subnet pública:  10.0.1.0/24 (para el tunnel de Cloudflare)
-Subnet privada:  10.0.2.0/24 (para BDs — sin acceso directo desde Internet)
-```
-
-### 2. Security Lists
-
-**Subnet pública (ingress)**:
-- TCP 22 desde tu IP (SSH)
-- Todo el tráfico desde 10.0.0.0/16 (comunicación interna)
-
-**Subnet privada (ingress)**:
-- TCP 5432 desde 10.0.1.0/24 (PostgreSQL, solo desde subnet pública)
-- TCP 6333 desde 10.0.1.0/24 (Qdrant, solo desde subnet pública)
-
-### 3. Crear Compute Instance
+## 1. Provisionar con Terraform
 
 ```bash
-# VM ARM Always Free
-Shape: VM.Standard.A1.Flex
-OCPUs: 4
-RAM: 24 GB
-OS: Ubuntu 24.04 (aarch64)
-Boot volume: 100 GB
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars   # OCIDs, tu IP /32 para el Bastion, SSH key
+terraform init
+terraform plan
+terraform apply
+terraform output instances                     # IP privada + OCID por proyecto
 ```
 
-### 4. Configurar la VM
+El `cloud-init` instala `podman`, `podman-compose` y `git`, habilita linger y el
+socket de Podman. Las imágenes del proyecto son multi-arch (arm64), así que el
+shape Ampere funciona.
+
+## 2. Entrar por Bastion (sin IP pública)
 
 ```bash
-# SSH a la VM
-ssh -i ~/.ssh/oci_key ubuntu@<IP_PUBLICA>
-
-# Instalar Podman
-sudo apt update && sudo apt install -y podman podman-compose
-
-# Instalar cloudflared
-curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 \
-  -o /usr/local/bin/cloudflared
-chmod +x /usr/local/bin/cloudflared
-
-# Clonar el proyecto
-git clone https://github.com/<tu-usuario>/docuagent.git
-cd docuagent
-
-# Configurar .env (con secretos de OCI Vault)
-cp .env.example .env
-nano .env
-
-# Levantar
-./ops/docuagent.sh up
+oci bastion session create-managed-ssh \
+  --bastion-id <bastion_id> \
+  --target-resource-id <instance_ocid> \
+  --target-os-username ubuntu \
+  --ssh-public-key-file ~/.ssh/id_ed25519.pub \
+  --session-ttl 3600
+# `oci bastion session get --session-id <id>` imprime el comando SSH con ProxyCommand.
 ```
 
-### 5. OCI Container Registry (OCIR)
+(En la consola de OCI, **Bastion → Sessions** también da el comando listo.)
+
+## 3. Desplegar la app en la VM
 
 ```bash
-# Login a OCIR (desde GitHub Actions o local)
-podman login <region>.ocir.io/<namespace> \
+git clone <repo> docuagent && cd docuagent
+cp .env.example .env.prod        # rellena: túnel de PROD, claves, COOKIE_DOMAIN, CORS, etc.
+./ops/docuagent.sh up            # pull de OCIR + levantar (incluye cloudflared)
+./ops/docuagent.sh migrate       # alembic upgrade head (si hace falta)
+```
+
+El `cloudflared` del compose levanta el **túnel de producción** (su token va en
+`.env.prod`) publicando `docuagent.*` / `api-docuagent.*` hacia esta VM.
+
+## 4. OCIR (registro de imágenes)
+
+Las imágenes las construye y empuja el workflow `deploy.yml` (build → OCIR → SSH).
+Login manual si lo necesitas:
+
+```bash
+podman login <region>.ocir.io \
   -u "<namespace>/oracleidentitycloudservice/<email>" \
   -p "<auth-token>"
-
-# Push manual (normalmente lo hace CI/CD)
-podman push <region>.ocir.io/<namespace>/docuagent-backend:latest
-podman push <region>.ocir.io/<namespace>/docuagent-frontend:latest
 ```
 
-### 6. OCI Vault (secretos)
+## 5. Secretos en producción
 
-Almacenar en OCI Vault:
-- `COHERE_API_KEY`
-- `OPENAI_API_KEY` (u otro LLM provider)
-- `DB_PASSWORD`
-- `QDRANT_API_KEY`
-- `LANGCHAIN_API_KEY`
-- `CLOUDFLARE_TUNNEL_TOKEN`
+Mismos valores que staging (proyecto de portafolio), en `.env.prod` en la VM o en
+**OCI Vault**. Rotar las llaves de staging antes de exponer prod. Nunca en git.
 
-### 7. OCI Object Storage (documentos)
+## Checklist de deploy
 
-```bash
-# Crear bucket para documentos originales
-oci os bucket create \
-  --compartment-id <compartment-id> \
-  --name docuagent-documents \
-  --storage-tier Standard
-```
-
-## Checklist de Deploy
-
-- [ ] VCN + subnets creadas
-- [ ] Security lists configuradas (solo puertos necesarios)
-- [ ] VM ARM creada y SSH accesible
-- [ ] Podman + cloudflared instalados en la VM
-- [ ] OCIR configurado, imágenes pusheadas
-- [ ] `.env` configurado con secretos reales
-- [ ] `./ops/docuagent.sh up` funciona
-- [ ] Health check pasa: `curl https://api-agent.tu-dominio.dev/api/v1/health`
-- [ ] Frontend accesible: `https://agent.tu-dominio.dev`
-- [ ] DNS configurado en Cloudflare
-- [ ] OCI Vault con secretos
-- [ ] Object Storage bucket creado
-- [ ] GitHub Actions con secrets de OCIR
-- [ ] CI/CD workflow probado
+- [ ] `terraform apply` OK (VCN/subnet/NAT/Bastion + instancia)
+- [ ] Acceso por Bastion verificado
+- [ ] OCIR configurado; secrets/vars de GitHub para `deploy.yml`
+- [ ] `vars.DEPLOY_ENABLED` activado
+- [ ] `.env.prod` con secretos reales (rotados) + `COOKIE_DOMAIN` + `CORS_ALLOWED_ORIGINS`
+- [ ] Túnel de PROD creado y apuntando a los servicios de la VM
+- [ ] `./ops/docuagent.sh up` + `migrate` OK
+- [ ] `https://api-docuagent.angelezequiel.dev/api/v1/health` responde
+- [ ] `https://docuagent.angelezequiel.dev` carga; chat RAG y uploads funcionan

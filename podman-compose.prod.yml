@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  backend:
+    image: ${OCIR_REGISTRY}/docuagent-backend:latest
+    build: !reset null
+    ports: !reset []
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    image: ${OCIR_REGISTRY}/docuagent-frontend:latest
+    build: !reset null
+    ports: !reset []
+
+  postgres:
+    ports: !reset []
+
+  qdrant:
+    ports: !reset []
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: docuagent-tunnel-prod
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - frontend
+    restart: unless-stopped

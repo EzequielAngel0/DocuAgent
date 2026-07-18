@@ -1,0 +1,12 @@
+# No copiar al contexto de build (aplica a todas las etapas).
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.git/
+.gitignore
+uploads/
+*.log

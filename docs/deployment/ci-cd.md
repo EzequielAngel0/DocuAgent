@@ -1,189 +1,72 @@
 # 🔄 CI/CD (GitHub Actions)
 
-## Workflows
+Dos workflows en `.github/workflows/`:
 
 ```
 .github/workflows/
-  ci.yml              # Validación en cada push/PR
-  images.yml          # Build + push a OCIR al mergear a main
-  deploy-prod.yml     # Deploy manual a OCI
+  ci.yml        # Lint + tests en push/PR (backend y frontend)
+  deploy.yml    # Build → OCIR + deploy por SSH a OCI (en merge a main)
 ```
+
+> El deploy está **gateado por la variable de repositorio `DEPLOY_ENABLED`**:
+> permanece inactivo hasta crearla con valor `true`. Así, mergear a `main` antes
+> de tener OCI no rompe el pipeline. Ver `docs/deployment/oci-go-live.md`.
 
 ---
 
 ## ci.yml — Validación
 
-Se ejecuta en **cada push** a cualquier branch y en **cada PR** a `develop` o `main`.
+Se ejecuta en **push** a `develop`/`main` y en **PR** a esas ramas. Dos jobs en
+paralelo; cancela ejecuciones previas del mismo ref.
 
-```yaml
-name: CI
+### Job `backend`
 
-on:
-  push:
-    branches: [develop, main]
-  pull_request:
-    branches: [develop, main]
+Levanta servicios `postgres:16` y `qdrant:v1.10.0`, instala
+`requirements-dev.txt` (Python 3.12) y corre:
 
-jobs:
-  backend:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: docuagent_test
-        ports: ["5432:5432"]
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-      qdrant:
-        image: qdrant/qdrant:v1.10.0
-        ports: ["6333:6333"]
+- `ruff check app tests` + `ruff format --check app tests` (bloqueante).
+- `mypy app` (informativo, no bloquea).
+- `pytest` (unit + integration; el test de `/` no requiere servicios, pero
+  están disponibles para futuras pruebas de integración).
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
+### Job `frontend`
 
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip install -e ".[dev]"
-
-      - name: Lint
-        run: |
-          cd backend
-          ruff check app/
-
-      - name: Type check
-        run: |
-          cd backend
-          mypy app/
-
-      - name: Unit tests
-        run: |
-          cd backend
-          pytest tests/unit/ -v
-
-      - name: Integration tests
-        env:
-          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/docuagent_test
-          QDRANT_HOST: localhost
-          QDRANT_PORT: 6333
-        run: |
-          cd backend
-          pytest tests/integration/ -v
-
-  frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install
-        run: cd frontend && npm ci
-
-      - name: Lint
-        run: cd frontend && npm run lint
-
-      - name: Build
-        run: cd frontend && npm run build
-```
+Node 20: `npm ci` → `npm run lint` → `npm run build` (con `NEXT_PUBLIC_*` de
+producción como variables de entorno del build).
 
 ---
 
-## images.yml — Build + Push a OCIR
+## deploy.yml — Build + push a OCIR y deploy SSH
 
-Se ejecuta al **mergear a `main`** cuando cambian archivos de backend o frontend.
+Se ejecuta en **push a `main`** (cuando cambian `backend/`, `frontend/`,
+`podman-compose*.yml`, `ops/` o el propio workflow) y por `workflow_dispatch`.
+Ambos jobs requieren `vars.DEPLOY_ENABLED == 'true'`.
 
-```yaml
-name: Build Images
+### Job `build-push` (matriz backend/frontend)
 
-on:
-  push:
-    branches: [main]
-    paths:
-      - "backend/**"
-      - "frontend/**"
+- Login a OCIR (`docker/login-action`).
+- `docker/build-push-action` construye y publica
+  `docuagent-<service>:latest` y `:<sha>`.
+- El frontend recibe `NEXT_PUBLIC_*` como **build-args** (se inlinean en build);
+  el backend los ignora.
+- Caché de capas con `type=gha`.
 
-jobs:
-  build-push:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [backend, frontend]
+### Job `deploy` (depende de `build-push`)
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Login to OCIR
-        run: |
-          echo "${{ secrets.OCIR_TOKEN }}" | \
-          podman login ${{ secrets.OCIR_REGISTRY }} \
-            -u "${{ secrets.OCIR_USER }}" --password-stdin
-
-      - name: Build image
-        run: |
-          podman build \
-            -f ${{ matrix.service }}/Containerfile \
-            -t ${{ secrets.OCIR_REGISTRY }}/docuagent-${{ matrix.service }}:latest \
-            -t ${{ secrets.OCIR_REGISTRY }}/docuagent-${{ matrix.service }}:${{ github.sha }} \
-            ${{ matrix.service }}/
-
-      - name: Push image
-        run: |
-          podman push ${{ secrets.OCIR_REGISTRY }}/docuagent-${{ matrix.service }}:latest
-          podman push ${{ secrets.OCIR_REGISTRY }}/docuagent-${{ matrix.service }}:${{ github.sha }}
-```
+- SSH a la VM OCI (`appleboy/ssh-action`): `git pull` + `ops/docuagent.sh pull`
+  + `migrate` + `up`.
+- Healthcheck con reintentos contra `vars.HEALTHCHECK_URL`.
 
 ---
 
-## deploy-prod.yml — Deploy manual
+## Secrets y variables de GitHub
 
-Trigger **manual** (workflow_dispatch) para controlar cuándo se despliega.
+Lista completa en `docs/deployment/oci-go-live.md` (sección D). Resumen:
 
-```yaml
-name: Deploy PROD
-
-on:
-  workflow_dispatch:
-
-jobs:
-  deploy:
-    runs-on: [self-hosted, oci-prod]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Pull latest images
-        run: ./ops/docuagent.sh pull
-
-      - name: Run migrations
-        run: ./ops/docuagent.sh migrate
-
-      - name: Deploy
-        run: ./ops/docuagent.sh restart
-
-      - name: Health check
-        run: |
-          sleep 10
-          curl -f https://api-agent.tu-dominio.dev/api/v1/health || exit 1
-```
-
----
-
-## Secrets de GitHub (configurar en Settings → Secrets)
-
-| Secret | Descripción |
-|--------|-------------|
-| `OCIR_REGISTRY` | Registry de OCI (ej: `<region>.ocir.io/<namespace>`) |
-| `OCIR_USER` | Usuario de OCIR (ej: `<namespace>/oracleidentitycloudservice/<email>`) |
-| `OCIR_TOKEN` | Auth token de OCIR |
+- **Secrets**: `OCIR_REGISTRY`, `OCIR_USER`, `OCIR_TOKEN`, `OCI_HOST`,
+  `OCI_USER`, `OCI_SSH_KEY`, `OCI_APP_DIR`.
+- **Variables**: `DEPLOY_ENABLED`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL`,
+  `NEXT_PUBLIC_APP_NAME`, `HEALTHCHECK_URL`.
 
 ---
 
@@ -191,12 +74,11 @@ jobs:
 
 ```mermaid
 flowchart LR
-    PR[PR a develop] -->|CI pasa| DEV[Merge a develop]
-    DEV -->|Probado local con tunnel| PR2[PR a main]
-    PR2 -->|CI pasa| MAIN[Merge a main]
-    MAIN -->|images.yml| OCIR[Push a OCIR]
-    OCIR -->|deploy-prod.yml manual| OCI[Deploy OCI]
-
+    PR[PR a develop] -->|ci.yml verde| DEV[Merge a develop]
+    DEV -->|probado en staging local + tunnel| PR2[PR a main]
+    PR2 -->|ci.yml verde| MAIN[Merge a main]
+    MAIN -->|deploy.yml: build-push| OCIR[(OCIR)]
+    OCIR -->|deploy.yml: SSH| OCI[Instancia OCI]
     style MAIN fill:#2ecc71,color:#fff
     style OCIR fill:#3498db,color:#fff
     style OCI fill:#e74c3c,color:#fff

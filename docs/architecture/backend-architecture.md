@@ -1,361 +1,168 @@
 # 🐍 Arquitectura del Backend
 
-## Visión General
+El backend usa **FastAPI** como gateway HTTP/WebSocket y **LangGraph** para
+orquestar el agente RAG, con una separación clara por capas: API → agente →
+RAG/ingesta → proveedores LLM → datos.
 
-El backend está construido con **FastAPI** (API Gateway) y **LangGraph** (orquestación del agente RAG), siguiendo una arquitectura modular por capas.
+> Esta página describe la estructura **real** del código en `backend/app/`.
+> El flujo conceptual del pipeline está en `docs/pipeline/`.
 
-## Estructura del Backend
+## Estructura real
 
 ```
 backend/
 ├── app/
-│   ├── __init__.py
-│   ├── main.py                     # Punto de entrada FastAPI
-│   ├── config.py                   # Configuración centralizada (Pydantic Settings)
+│   ├── __init__.py                # __version__
+│   ├── main.py                    # FastAPI: CORS, routers, lifespan
 │   │
-│   ├── api/                        # Capa de API (endpoints)
-│   │   ├── __init__.py
-│   │   ├── deps.py                 # Dependencias compartidas (DB session, etc.)
-│   │   ├── v1/
-│   │   │   ├── __init__.py
-│   │   │   ├── router.py           # Router principal v1
-│   │   │   ├── chat.py             # POST /chat, WebSocket /chat/ws
-│   │   │   ├── documents.py        # CRUD de documentos
-│   │   │   ├── categories.py       # CRUD de categorías
-│   │   │   ├── feedback.py         # Feedback de respuestas
-│   │   │   └── health.py           # Health check, métricas
-│   │   └── middleware/
-│   │       ├── __init__.py
-│   │       ├── cors.py             # Configuración CORS
-│   │       ├── error_handler.py    # Manejo global de errores
-│   │       └── request_logging.py  # Logging de requests
+│   ├── core/                      # Transversal
+│   │   ├── config.py              # Settings (pydantic-settings)
+│   │   ├── logging.py             # structlog (consola/JSON)
+│   │   ├── exceptions.py          # Excepciones de dominio
+│   │   ├── security.py            # bcrypt, JWT, TOTP
+│   │   └── sanitizer.py           # Anti prompt-injection (entrada)
 │   │
-│   ├── agent/                      # Capa de Agente (LangGraph)
-│   │   ├── __init__.py
-│   │   ├── graph.py                # Definición del grafo principal
-│   │   ├── state.py                # Estado del agente (TypedDict)
-│   │   ├── nodes/
-│   │   │   ├── __init__.py
-│   │   │   ├── query_analyzer.py   # Análisis de la pregunta
-│   │   │   ├── retriever.py        # Búsqueda semántica
-│   │   │   ├── reranker.py         # Reclasificación con Cohere
-│   │   │   ├── context_builder.py  # Ensamblaje de contexto
-│   │   │   ├── generator.py        # Generación de respuesta
-│   │   │   └── validator.py        # Validación anti-alucinación
-│   │   └── prompts/
-│   │       ├── __init__.py
-│   │       ├── system.py           # System prompts
-│   │       ├── rag.py              # Prompt template para RAG
-│   │       └── fallback.py         # Prompts de fallback
+│   ├── models/                    # Datos
+│   │   ├── orm.py                 # SQLAlchemy (Base + 4 tablas)
+│   │   └── schemas.py             # Pydantic (contrato API)
 │   │
-│   ├── rag/                        # Pipeline RAG
-│   │   ├── __init__.py
-│   │   ├── embeddings.py           # Servicio de embeddings (Cohere)
-│   │   ├── vector_store.py         # Cliente Qdrant
-│   │   ├── reranker.py             # Cliente Cohere Rerank
-│   │   └── retrieval.py            # Lógica de retrieval combinada
+│   ├── db/
+│   │   └── session.py             # engine async + SessionLocal + get_db
 │   │
-│   ├── ingestion/                  # Pipeline de Ingesta
-│   │   ├── __init__.py
-│   │   ├── pipeline.py             # Orquestador de ingesta
-│   │   ├── extractors/
-│   │   │   ├── __init__.py
-│   │   │   ├── base.py             # Interfaz base del extractor
-│   │   │   ├── pdf.py              # Extractor de PDF
-│   │   │   ├── docx.py             # Extractor de Word
-│   │   │   ├── xlsx.py             # Extractor de Excel
-│   │   │   ├── markdown.py         # Extractor de Markdown
-│   │   │   ├── csv_extractor.py    # Extractor de CSV
-│   │   │   ├── json_extractor.py   # Extractor de JSON
-│   │   │   └── text.py             # Extractor de texto plano
-│   │   ├── cleaner.py              # Limpieza de texto
-│   │   └── chunker.py              # Chunking semántico
+│   ├── api/
+│   │   ├── deps.py                # get_current_user (JWT)
+│   │   └── v1/
+│   │       ├── router.py          # Agrega los routers v1
+│   │       └── endpoints/
+│   │           ├── health.py      # /health, /health/ready
+│   │           ├── auth.py        # login, verify-2fa, setup-2fa, logout
+│   │           ├── categories.py  # CRUD categorías (/admin/categories)
+│   │           ├── documents.py   # subida/reindex/borrado/chunks (/admin/documents)
+│   │           ├── feedback.py    # historial + feedback (/admin/history)
+│   │           └── chat.py        # WebSocket /chat/ws
 │   │
-│   ├── providers/                  # Proveedores LLM (multi-proveedor)
-│   │   ├── __init__.py
-│   │   ├── base.py                 # Interfaz base del proveedor
-│   │   ├── openai.py               # Proveedor OpenAI
-│   │   ├── gemini.py               # Proveedor Google Gemini
-│   │   ├── anthropic.py            # Proveedor Anthropic Claude
-│   │   ├── ollama.py               # Proveedor local (Ollama)
-│   │   └── factory.py              # Factory pattern para selección
+│   ├── agent/                     # Agente LangGraph
+│   │   ├── state.py               # AgentState (TypedDict)
+│   │   ├── prompts.py             # System prompt blindado + fallback
+│   │   ├── graph.py               # build_agent_graph, run_agent, prepare_context
+│   │   └── nodes/
+│   │       ├── query_analyzer.py  # sanea + detecta inyección
+│   │       ├── retriever.py       # embed + búsqueda Qdrant (top-K)
+│   │       ├── reranker.py        # Cohere Rerank + umbral
+│   │       ├── context_builder.py # ensambla contexto + citas
+│   │       ├── generator.py       # LLM (cadena de fallback)
+│   │       ├── validator.py       # anti-alucinación post-gen
+│   │       └── fallback.py        # respuesta honesta terminal
 │   │
-│   ├── models/                     # Modelos de datos
-│   │   ├── __init__.py
-│   │   ├── database.py             # Modelos SQLAlchemy (ORM)
-│   │   ├── schemas.py              # Schemas Pydantic (API)
-│   │   └── enums.py                # Enumeraciones
+│   ├── rag/                       # Recuperación
+│   │   ├── embeddings.py          # Cohere embed (doc/query)
+│   │   ├── vector_store.py        # Qdrant (VectorStore singleton)
+│   │   ├── reranker.py            # Cohere rerank
+│   │   └── retrieval.py           # retrieve_and_rerank (alto nivel)
 │   │
-│   ├── services/                   # Lógica de negocio
-│   │   ├── __init__.py
-│   │   ├── document_service.py     # Gestión de documentos
-│   │   ├── category_service.py     # Gestión de categorías
-│   │   ├── chat_service.py         # Gestión de sesiones de chat
-│   │   └── feedback_service.py     # Gestión de feedback
+│   ├── ingestion/                 # Ingesta de documentos
+│   │   ├── extractors.py          # DocumentExtractor (PDF/DOCX/XLSX/CSV/MD/TXT/HTML/JSON)
+│   │   ├── cleaner.py             # clean_text
+│   │   ├── chunker.py             # chunk_text (semántico + páginas)
+│   │   └── indexer.py             # index_document (orquestador)
 │   │
-│   ├── db/                         # Base de datos
-│   │   ├── __init__.py
-│   │   ├── session.py              # SessionLocal, engine
-│   │   └── base.py                 # Base declarativa SQLAlchemy
+│   ├── providers/                 # LLM multi-proveedor
+│   │   ├── base.py                # BaseLLMProvider (generate/stream)
+│   │   ├── openai_provider.py
+│   │   ├── gemini_provider.py
+│   │   ├── anthropic_provider.py
+│   │   ├── ollama_provider.py
+│   │   └── factory.py             # get_provider + *_with_fallback
 │   │
-│   └── core/                       # Utilidades transversales
-│       ├── __init__.py
-│       ├── logging.py              # Configuración de logging
-│       ├── exceptions.py           # Excepciones personalizadas
-│       └── utils.py                # Funciones de utilidad
+│   └── scripts/
+│       └── seed_documents.py      # Indexa documents/ a Qdrant + PostgreSQL
 │
-├── alembic/                        # Migraciones de BD
-│   ├── env.py
-│   ├── alembic.ini
-│   └── versions/
-│
-├── tests/                          # Tests
-│   ├── __init__.py
-│   ├── conftest.py                 # Fixtures compartidas
-│   ├── unit/
-│   │   ├── test_extractors.py
-│   │   ├── test_chunker.py
-│   │   ├── test_cleaner.py
-│   │   ├── test_providers.py
-│   │   └── test_services.py
-│   ├── integration/
-│   │   ├── test_rag_pipeline.py
-│   │   ├── test_agent_graph.py
-│   │   └── test_api_endpoints.py
-│   └── e2e/
-│       └── test_full_flow.py
-│
-├── requirements.txt                # Dependencias de producción
-├── requirements-dev.txt            # Dependencias de desarrollo
-├── pyproject.toml                  # Configuración del proyecto Python
-└── Containerfile                   # Imagen de contenedor (Podman)
+├── alembic/                       # Migraciones (env.py + versions/)
+├── tests/                         # unit/ · integration/
+├── requirements.txt               # Runtime
+├── requirements-dev.txt           # + ruff, mypy
+├── pyproject.toml                 # pytest + ruff
+└── Containerfile                  # Build multi-stage, no-root
 ```
 
-## Dependencias Principales
+> **Nota de nombres**: los módulos de proveedores se llaman `*_provider.py`
+> (no `openai.py`) para no ensombrecer los paquetes `openai`, etc. No existe
+> una capa `services/`: la lógica de negocio vive en los endpoints (CRUD) y en
+> `ingestion/indexer.py` / `agent/` (pipeline).
 
-```
-# requirements.txt (estimado)
+## Capas y responsabilidades
 
-# API Framework
-fastapi>=0.115.0
-uvicorn[standard]>=0.30.0
-python-multipart>=0.0.9
-websockets>=12.0
+| Capa | Módulo | Responsabilidad |
+|------|--------|-----------------|
+| API | `api/v1/endpoints/` | Validación, auth, serialización |
+| Agente | `agent/` | Grafo RAG (6 nodos + fallback) |
+| RAG | `rag/` | Embeddings, Qdrant, rerank |
+| Ingesta | `ingestion/` | Extraer → limpiar → chunkear → indexar |
+| Proveedores | `providers/` | LLM intercambiable + fallback |
+| Datos | `models/`, `db/` | ORM + esquemas + sesión |
+| Core | `core/` | Config, logging, errores, seguridad |
 
-# LangGraph / LangChain
-langgraph>=0.2.0
-langchain-core>=0.3.0
-langchain-cohere>=0.3.0
-langchain-openai>=0.2.0
-langchain-google-genai>=2.0.0
-langchain-anthropic>=0.2.0
-langchain-community>=0.3.0
-langsmith>=0.1.0
+## Dependencias principales
 
-# Embeddings & Vectores
-cohere>=5.0.0
-qdrant-client>=1.10.0
+Ver `backend/requirements.txt` para versiones exactas (fijadas). Resumen:
 
-# Base de Datos
-sqlalchemy[asyncio]>=2.0.0
-asyncpg>=0.29.0
-alembic>=1.13.0
+- **API**: `fastapi`, `uvicorn[standard]`, `python-multipart`, `httpx`
+- **Agente/LLM**: `langgraph`, `langchain`, `langchain-core`,
+  `langchain-openai`, `langchain-google-genai`, `langchain-anthropic`,
+  `langchain-ollama`
+- **RAG**: `cohere` (embeddings + rerank), `qdrant-client`
+- **Datos**: `sqlalchemy[asyncio]`, `asyncpg`, `alembic`, `pydantic-settings`
+- **Seguridad**: `python-jose`, `passlib[bcrypt]`, `bcrypt`, `pyotp`, `qrcode`
+- **Ingesta**: `pypdf`, `python-docx`, `openpyxl`
+- **Observabilidad**: `structlog`
+- **Dev/CI**: `ruff`, `mypy`, `pytest`, `pytest-asyncio`
 
-# Procesamiento de Documentos
-pymupdf>=1.24.0            # PDF
-python-docx>=1.1.0         # Word
-openpyxl>=3.1.0             # Excel
-markdown>=3.6               # Markdown
-beautifulsoup4>=4.12.0      # HTML cleanup
+## Patrones de diseño
 
-# Utilidades
-pydantic>=2.9.0
-pydantic-settings>=2.5.0
-python-dotenv>=1.0.0
-httpx>=0.27.0               # HTTP client async
-structlog>=24.0.0           # Structured logging
+### Factory + cadena de fallback (proveedores LLM)
 
-# Dev
-pytest>=8.0.0
-pytest-asyncio>=0.24.0
-pytest-cov>=5.0.0
-ruff>=0.6.0                 # Linter + formatter
-mypy>=1.11.0                # Type checker
-```
-
-## Patrones de Diseño
-
-### 1. Factory Pattern (Proveedores LLM)
+`providers/factory.py` registra los 4 proveedores y los construye de forma
+perezosa (no exige todos los SDK instalados). `generate_with_fallback` y
+`stream_with_fallback` recorren `settings.fallback_chain` (proveedor activo +
+`LLM_FALLBACK_CHAIN`, sin duplicados) hasta obtener respuesta; si todos fallan
+lanzan `LLMProviderError`.
 
 ```python
-# providers/factory.py
-class LLMProviderFactory:
-    """Crea el proveedor LLM correcto según la configuración."""
-
-    _providers = {
-        "openai": OpenAIProvider,
-        "gemini": GeminiProvider,
-        "anthropic": AnthropicProvider,
-        "ollama": OllamaProvider,
-    }
-
-    @classmethod
-    def create(cls, provider_name: str, **kwargs) -> BaseLLMProvider:
-        provider_class = cls._providers.get(provider_name)
-        if not provider_class:
-            raise ValueError(f"Proveedor desconocido: {provider_name}")
-        return provider_class(**kwargs)
+text, provider = await generate_with_fallback(system_prompt, user_query)
 ```
 
-### 2. Strategy Pattern (Extractores)
+### Máquina de estados (LangGraph)
 
-```python
-# ingestion/extractors/base.py
-from abc import ABC, abstractmethod
+`agent/state.py` define `AgentState` (TypedDict) y `agent/graph.py` arma el
+grafo: `query_analyzer → retriever → reranker → context_builder → generator →
+validator`, con un nodo terminal `fallback`. Transiciones condicionales
+derivan al fallback ante inyección, ausencia de contexto o respuesta inválida.
 
-class BaseExtractor(ABC):
-    """Interfaz base para extractores de documentos."""
+Para el chat con streaming, `prepare_context()` ejecuta los nodos previos a la
+generación (reutilizando las mismas funciones) y el WebSocket transmite los
+tokens del `generator` en vivo — manteniendo consistentes el camino streaming
+y el no-streaming (`run_agent`).
 
-    @abstractmethod
-    async def extract(self, file_path: str) -> ExtractedContent:
-        """Extrae texto de un archivo."""
-        ...
+### Configuración (pydantic-settings)
 
-    @classmethod
-    def supports(cls, mime_type: str) -> bool:
-        """Indica si el extractor soporta este tipo de archivo."""
-        ...
-```
+`core/config.py` expone un único `settings`. Variables clave en
+`UPPER_SNAKE_CASE` (ver `.env.example`). Campos computados:
+`DATABASE_URL`, `cors_origins`, `fallback_chain`, `IS_PRODUCTION`.
 
-### 3. State Machine (LangGraph Agent)
+## Manejo de errores y logging
 
-```python
-# agent/state.py
-from typing import TypedDict, Annotated
-from langgraph.graph import add_messages
+- `core/exceptions.py`: `DocuAgentError` y subtipos (`IngestionError`,
+  `UnsupportedFormatError`, `RetrievalError`, `LLMProviderError`,
+  `PromptInjectionError`) con `status_code` mapeable a HTTP.
+- `core/logging.py`: `structlog` con salida de consola en dev y **JSON en
+  producción** (`LOG_JSON=true`). Se usa `get_logger(__name__)` y eventos
+  clave-valor (`logger.info("ingestion_indexed", document_id=..., chunks=...)`).
 
-class AgentState(TypedDict):
-    """Estado que fluye a través del grafo del agente."""
-    messages: Annotated[list, add_messages]  # Historial conversacional
-    query: str                                # Pregunta original
-    query_embedding: list[float]              # Vector de la pregunta
-    retrieved_chunks: list[dict]              # Chunks recuperados
-    reranked_chunks: list[dict]               # Chunks post-reranking
-    context: str                              # Contexto ensamblado
-    response: str                             # Respuesta generada
-    sources: list[dict]                       # Fuentes citadas
-    confidence: float                         # Confianza en la respuesta
-    needs_fallback: bool                      # Si necesita fallback
-```
+## Seguridad (resumen)
 
-### 4. Repository Pattern (Servicios)
-
-```python
-# services/document_service.py
-class DocumentService:
-    """Lógica de negocio para documentos, desacoplada del ORM."""
-
-    def __init__(self, db: AsyncSession, vector_store: QdrantClient):
-        self.db = db
-        self.vector_store = vector_store
-
-    async def create_document(self, data: DocumentCreate) -> Document:
-        ...
-
-    async def search_documents(self, query: str, category: str | None) -> list:
-        ...
-```
-
-## Configuración
-
-La configuración se centraliza con **Pydantic Settings**, cargando desde variables de entorno y `.env`:
-
-```python
-# config.py
-from pydantic_settings import BaseSettings
-
-class Settings(BaseSettings):
-    # API
-    api_host: str = "0.0.0.0"
-    api_port: int = 8000
-    api_prefix: str = "/api/v1"
-
-    # Database
-    database_url: str = "postgresql+asyncpg://user:pass@localhost:5432/docuagent"
-
-    # Qdrant
-    qdrant_host: str = "localhost"
-    qdrant_port: int = 6333
-    qdrant_collection: str = "documents"
-
-    # Cohere
-    cohere_api_key: str
-    cohere_embed_model: str = "embed-multilingual-v3.0"
-    cohere_rerank_model: str = "rerank-multilingual-v3.0"
-
-    # LLM Provider
-    llm_provider: str = "openai"  # openai | gemini | anthropic | ollama
-    openai_api_key: str | None = None
-    gemini_api_key: str | None = None
-    anthropic_api_key: str | None = None
-    ollama_base_url: str = "http://localhost:11434"
-    llm_model: str = "gpt-4o-mini"
-    llm_temperature: float = 0.1
-
-    # RAG
-    retrieval_top_k: int = 20
-    rerank_top_n: int = 5
-    confidence_threshold: float = 0.3
-
-    # LangSmith
-    langchain_tracing_v2: bool = True
-    langchain_api_key: str | None = None
-    langchain_project: str = "docuagent"
-
-    # Storage
-    upload_dir: str = "./uploads"
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
-```
-
-## Manejo de Errores
-
-```python
-# core/exceptions.py
-class DocuAgentError(Exception):
-    """Base exception para DocuAgent."""
-
-class DocumentNotFoundError(DocuAgentError):
-    """Documento no encontrado."""
-
-class ExtractionError(DocuAgentError):
-    """Error en la extracción de texto."""
-
-class EmbeddingError(DocuAgentError):
-    """Error al generar embeddings."""
-
-class LLMProviderError(DocuAgentError):
-    """Error del proveedor LLM."""
-
-class RetrievalError(DocuAgentError):
-    """Error en la recuperación de documentos."""
-```
-
-## Logging Estructurado
-
-```python
-# core/logging.py
-import structlog
-
-structlog.configure(
-    processors=[
-        structlog.contextvars.merge_contextvars,
-        structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.JSONRenderer(),
-    ],
-    logger_factory=structlog.PrintLoggerFactory(),
-)
-```
+Detalle en `docs/architecture/security.md`. En el backend:
+- **Anti prompt-injection**: `core/sanitizer.py` (entrada) + system prompt
+  blindado con 7 reglas NUNCA + delimitadores XML + nodo `validator` (salida).
+- **Auth admin**: password (bcrypt) → Turnstile → TOTP → JWT.
+- **CORS** restringido a `CORS_ALLOWED_ORIGINS` (sin comodín con credenciales).
+- **Uploads**: allowlist de extensiones + límite de tamaño (streaming).

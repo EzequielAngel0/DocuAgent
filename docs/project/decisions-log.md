@@ -253,6 +253,133 @@ Se necesita contenerizar la aplicación para desarrollo local y despliegue en OC
 
 ---
 
+## ADR-012: Materialización de la arquitectura modular del backend
+
+**Fecha**: 2026-06-27
+**Estado**: ✅ Aceptada
+
+### Contexto
+La documentación describía una arquitectura modular (LangGraph, `providers/`,
+`rag/`, `ingestion/`, `models/`, `core/`) que la primera implementación no
+seguía: el backend era un par de archivos en `services/` y endpoints planos.
+
+### Decisión
+Refactorizar el backend a la estructura documentada **preservando las rutas de
+API** (`/auth`, `/admin/*`, `/chat/ws`) para no romper el frontend:
+- Agente **LangGraph** real (`agent/`): `state`, `prompts`, `graph` y 6 nodos
+  (+ `fallback`), con `prepare_context` para el streaming del WebSocket.
+- **Factory de proveedores** con cadena de fallback (`providers/`):
+  openai → gemini → anthropic → ollama (perezoso, no exige todos los SDK).
+- `rag/` (embeddings, vector_store, reranker, retrieval) e `ingestion/`
+  (extractors, cleaner, chunker, indexer) separados.
+- `core/` ampliado: `logging` (structlog), `exceptions`, `sanitizer`.
+
+### Consecuencias
+- Se eliminó la capa `services/` y los endpoints planos legacy.
+- Nuevas dependencias: `langgraph`, `langchain-anthropic`, `langchain-ollama`,
+  `structlog`.
+- El esquema relacional se mantuvo simple (`audit_logs`, sin tablas
+  `chat_*`/`chunks`); ver `database-design.md` (evolución futura).
+
+---
+
+## ADR-013: Despliegue automatizado a OCI gateado por variable
+
+**Fecha**: 2026-06-27
+**Estado**: ✅ Aceptada
+
+### Contexto
+Hay que dejar listo el camino a OCI sin tener aún la instancia provisionada, y
+sin que el pipeline falle en `main` mientras tanto.
+
+### Decisión
+- `ci.yml`: lint (ruff) + tests (pytest) + build del frontend en push/PR.
+- `deploy.yml`: build → push a OCIR + deploy por SSH (`ops/docuagent.sh`),
+  **condicionado a `vars.DEPLOY_ENABLED == 'true'`** (inactivo por defecto).
+- Healthcheck real (`/api/v1/health`) tras el deploy.
+- Build-args para `NEXT_PUBLIC_*` (se inlinean en build, no en runtime).
+
+### Consecuencias
+- Activar el deploy = crear secrets/variables + `DEPLOY_ENABLED=true`
+  (checklist en `oci-go-live.md`).
+- Staging sigue siendo local + túnel; OCI = producción.
+
+---
+
+## ADR-014: Infra OCI de portafolio — una VM por proyecto, sin IP pública, con Terraform
+
+**Fecha**: 2026-06-29
+**Estado**: ✅ Aceptada
+
+### Contexto
+La instancia de OCI se usará para proyectos de portafolio (no negocio), con
+recursos modestos (1 OCPU / 6 GB por instancia). Se quería dejar la infra
+reproducible y preparada para añadir más proyectos a futuro.
+
+### Decisión
+- **Una instancia por proyecto** (mapa `var.projects`), no multi-VM ni Load
+  Balancer. Un stack RAG pesado (Postgres + Qdrant + backend LLM) llena una VM de
+  1 OCPU / 6 GB; co-locar un segundo solo si es ligero.
+- **Red compartida** (1 VCN + subnet privada + NAT + Service Gateway + Bastion)
+  reutilizable por todos los proyectos.
+- **Sin IP pública** en las instancias: el tráfico entra por el **túnel de
+  Cloudflare** (saliente) y la administración por **OCI Bastion**; salida a
+  internet por **NAT**.
+- Todo como **Terraform** en `infra/terraform/` (resumen en
+  `docs/deployment/oci-terraform.md`).
+
+### Justificación
+- Superficie de ataque mínima (cero ingress público).
+- Reproducible y versionado; escalar = una entrada más en el mapa `projects`.
+- Encaja en el Always Free (Ampere A1 ARM; imágenes multi-arch).
+
+### Consecuencias
+- Hay que provisionar (`terraform apply`) y entrar por Bastion para operar.
+- `terraform.tfvars` y el state no se commitean (datos sensibles).
+
+---
+
+## ADR-015: Sesión admin en cookie httponly (2FA + Turnstile)
+
+**Fecha**: 2026-06-29
+**Estado**: ✅ Aceptada (sustituye el "sin auth en MVP")
+
+### Contexto
+El panel admin maneja documentos y configuración; necesitaba autenticación real y
+proteger el token de XSS.
+
+### Decisión
+Flujo email+password (bcrypt) → **Cloudflare Turnstile** → **TOTP 2FA** (pyotp) →
+**JWT con `iss`/`aud` en cookie httponly+secure** (dominio compartido para los
+subdominios). El frontend usa `credentials: 'include'`; no hay token en JS. Login
+y 2FA con **rate limit** + **lockout** tras N fallos. Admin sembrado desde `.env`.
+
+### Consecuencias
+- CORS con allowlist (sin comodín) y `COOKIE_DOMAIN` correcto son obligatorios.
+- _Pendiente_: refresh token con rotación.
+
+---
+
+## ADR-016: Modelo LLM activo — gemini-2.5-flash
+
+**Fecha**: 2026-06-29
+**Estado**: ✅ Aceptada
+
+### Contexto
+`gemini-1.5-flash` quedó deprecado (404) y `gemini-2.0-flash` sin cuota en el free
+tier (429), colgando la respuesta por reintentos de LangChain (~2 min).
+
+### Decisión
+`LLM_PROVIDER=gemini` con `GEMINI_MODEL=gemini-2.5-flash` (responde 200 en free
+tier), `LLM_MAX_RETRIES=1` y `LANGCHAIN_TRACING_V2=false` por defecto. El resto de
+proveedores quedan en la cadena de fallback.
+
+### Consecuencias
+- Respuestas factuales (temperature 0.1) sin colgarse ante fallos.
+- Cambiar de proveedor = variables de entorno, sin tocar código (factory).
+
+---
+
 ## Plantilla para Nuevas Decisiones
 
 ```markdown
